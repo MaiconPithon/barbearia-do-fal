@@ -601,12 +601,13 @@ export default function Agendar() {
                   const height = (totalDuration || 30) * PX_PER_MIN;
                   return (
                      <div
-                       className="absolute left-8 right-0 rounded-md pointer-events-none z-20 border-2 border-[#d1b122] bg-[#d1b122]/20 flex items-start px-3 py-1.5"
-                       style={{ top: `${top}px`, minHeight: '52px', height: `${Math.max(height, 52)}px` }}
+                       className="absolute left-8 right-0 rounded-md pointer-events-none z-20 bg-[#d1b122] flex flex-col justify-center px-3 py-1.5"
+                       style={{ top: `${top}px`, minHeight: '45px', height: `${Math.max(height, 45)}px` }}
                      >
-                       <span className="text-[11px] font-bold text-black leading-tight drop-shadow-[0_0_2px_rgba(209,177,34,0.8)]">
+                       <span className="text-[12px] font-bold text-[#000000] leading-tight">
                          {serviceDescription}
-                         <br />
+                       </span>
+                       <span className="text-[11px] text-[#000000]/80 leading-tight">
                          {toTime(startMin)} até {toTime(startMin + (totalDuration || 30))}
                        </span>
                      </div>
