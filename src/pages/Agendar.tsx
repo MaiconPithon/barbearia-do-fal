@@ -393,7 +393,7 @@ export default function Agendar() {
 
   // Selected time warning
   const selectedTimeWarning = selectedTime
-    ? getSlotStatus(toMin(selectedTime), totalDuration || 30).warning
+    ? getSlotStatus(toMin(selectedTime), totalServiceSpan || 30).warning
     : undefined;
 
   return (
