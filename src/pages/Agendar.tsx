@@ -86,6 +86,7 @@ export default function Agendar() {
   const { data: appointmentsRaw } = useQuery({
     queryKey: ["appointments", selectedDate?.toISOString()],
     enabled: !!selectedDate,
+    refetchInterval: 15000,
     queryFn: async () => {
       const dateStr = format(selectedDate!, "yyyy-MM-dd");
       const { data, error } = await supabase
@@ -97,6 +98,21 @@ export default function Agendar() {
       return data;
     },
   });
+
+  // Real-time: instantly refetch when any appointment changes (cancel, update, etc.)
+  useEffect(() => {
+    const channel = supabase
+      .channel('agendar-appointments')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'appointments' },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["appointments"] });
+        }
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [queryClient]);
 
   const { data: blockedSlots } = useQuery({
     queryKey: ["blocked_slots", selectedDate?.toISOString()],
