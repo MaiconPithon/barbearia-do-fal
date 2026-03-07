@@ -75,7 +75,7 @@ const Index = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["my-appointments", searchPhone] });
-      queryClient.invalidateQueries({ queryKey: ["appointments"] }); // instant clear on timeline
+      queryClient.invalidateQueries({ queryKey: ["appointments"] }); // invalidates all date-specific appointment queries
       toast.success("Horário liberado com sucesso!");
     },
     onError: () => toast.error("Não foi possível cancelar. Tente novamente."),

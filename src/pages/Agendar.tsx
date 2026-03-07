@@ -20,7 +20,6 @@ type Step = "service" | "date" | "time" | "info" | "payment" | "confirm" | "conf
 const STEPS: Step[] = ["service", "date", "time", "info", "payment", "confirm"];
 
 const WHATSAPP_NUMBER = "5571988335001";
-const TIMELINE_SLOT = 15; // 15-min granularity for timeline
 
 // Convert "HH:MM" to minutes
 const toMin = (t: string) => {
@@ -69,6 +68,19 @@ export default function Agendar() {
       return data;
     },
   });
+
+  const { data: businessSettings } = useQuery({
+    queryKey: ["business_settings"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("business_settings").select("key, value");
+      if (error) throw error;
+      const map: Record<string, string> = {};
+      data.forEach((r: any) => { map[r.key] = r.value; });
+      return map;
+    },
+  });
+
+  const slotInterval = Number(businessSettings?.slot_interval_minutes || 30);
 
   const { data: appointmentsRaw } = useQuery({
     queryKey: ["appointments", selectedDate?.toISOString()],
@@ -172,7 +184,7 @@ export default function Agendar() {
         apptEnd = toMin(a.actual_end_time.slice(0, 5));
       } else {
         const dur = a.services?.duration_minutes ?? 30;
-        const buf = a.services?.buffer_minutes ?? 5;
+        const buf = a.services?.buffer_minutes ?? 0;
         apptEnd = apptStart + dur + buf;
       }
       blocks.push({
@@ -187,7 +199,7 @@ export default function Agendar() {
     blockedTimes.forEach((t) => {
       blocks.push({
         start: toMin(t),
-        end: toMin(t) + TIMELINE_SLOT,
+        end: toMin(t) + slotInterval,
         type: "blocked",
         label: "Bloqueado",
       });
@@ -256,16 +268,32 @@ export default function Agendar() {
     const closeMin = toMin(dayConfig.close_time?.slice(0, 5) || "21:00");
     const duration = totalDuration || 30;
     const slots: { time: number; status: ReturnType<typeof getSlotStatus> }[] = [];
+    const slotTimes = new Set<number>();
 
-    // Align first slot to the 15-min grid from midnight (e.g. 08:20 → 08:20, 08:35, 08:50...)
-    // Ensure we start exactly at openMin and step in exact TIMELINE_SLOT increments
-    const firstSlot = openMin;
-    for (let m = firstSlot; m < closeMin; m += TIMELINE_SLOT) {
-      const status = getSlotStatus(m, duration);
-      slots.push({ time: m, status });
+    // 1. Add grid slots (e.g. 08:00, 08:30...)
+    for (let m = openMin; m < closeMin; m += slotInterval) {
+      slotTimes.add(m);
     }
+
+    // 2. Add exact end times of existing appointments (so next can start immediately)
+    timelineBlocks
+      .filter(b => b.type === "booked")
+      .forEach(b => {
+        if (b.end >= openMin && b.end < closeMin) {
+          slotTimes.add(b.end);
+        }
+      });
+
+    // Sort and build final slots
+    Array.from(slotTimes)
+      .sort((a, b) => a - b)
+      .forEach(m => {
+        const status = getSlotStatus(m, duration);
+        slots.push({ time: m, status });
+      });
+
     return slots;
-  }, [dayConfig, totalDuration, timelineBlocks]);
+  }, [dayConfig, totalDuration, timelineBlocks, slotInterval]);
 
   // Pixel height per minute for timeline
   const PX_PER_MIN = 2.5;
@@ -507,7 +535,7 @@ export default function Agendar() {
                     <div
                       key={time}
                       className="absolute flex items-center"
-                      style={{ top: `${top}px`, left: 0, right: 0, height: `${TIMELINE_SLOT * PX_PER_MIN}px` }}
+                      style={{ top: `${top}px`, left: 0, right: 0, height: `${20}px` }}
                     >
                       {/* Time label */}
                       <div
@@ -522,7 +550,7 @@ export default function Agendar() {
                         className={cn(
                           "absolute left-[13px] w-1.5 h-1.5 rounded-full z-10",
                           isSelected ? "bg-[#d1b122] scale-150" :
-                          isOccupied ? "bg-muted-foreground/30" : "bg-[#d1b122]/60"
+                            isOccupied ? "bg-muted-foreground/30" : "bg-[#d1b122]/60"
                         )}
                       />
 
@@ -600,17 +628,17 @@ export default function Agendar() {
                   const top = (startMin - openMin) * PX_PER_MIN;
                   const height = (totalDuration || 30) * PX_PER_MIN;
                   return (
-                     <div
-                       className="absolute left-8 right-0 rounded-md pointer-events-none z-20 bg-[#d1b122] flex flex-col justify-center px-3 py-1.5"
-                       style={{ top: `${top}px`, minHeight: '45px', height: `${Math.max(height, 45)}px` }}
-                     >
-                       <span className="text-[12px] font-bold text-[#000000] leading-tight">
-                         {serviceDescription}
-                       </span>
-                       <span className="text-[11px] text-[#000000]/80 leading-tight">
-                         {toTime(startMin)} até {toTime(startMin + (totalDuration || 30))}
-                       </span>
-                     </div>
+                    <div
+                      className="absolute left-8 right-0 rounded-md pointer-events-none z-20 bg-[#d1b122] flex flex-col justify-center px-3 py-1.5"
+                      style={{ top: `${top}px`, minHeight: '45px', height: `${Math.max(height, 45)}px` }}
+                    >
+                      <span className="text-[12px] font-bold text-[#000000] leading-tight">
+                        {serviceDescription}
+                      </span>
+                      <span className="text-[11px] text-[#000000]/80 leading-tight">
+                        {toTime(startMin)} até {toTime(startMin + (totalDuration || 30))}
+                      </span>
+                    </div>
                   );
                 })()}
 

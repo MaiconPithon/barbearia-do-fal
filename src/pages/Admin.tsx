@@ -191,6 +191,7 @@ export default function Admin() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-appointments"] });
+      queryClient.invalidateQueries({ queryKey: ["appointments"] });
       toast.success("Status atualizado!");
     },
   });
@@ -202,6 +203,7 @@ export default function Admin() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-appointments"] });
+      queryClient.invalidateQueries({ queryKey: ["appointments"] });
       toast.success("Agendamento excluído!");
     },
     onError: (e: any) => toast.error(e.message),
