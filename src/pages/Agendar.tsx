@@ -1,5 +1,5 @@
-import { useState, useMemo } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useState, useMemo, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,6 +40,7 @@ interface TimelineBlock {
 
 export default function Agendar() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const appearance = useAppearance();
   const [step, setStep] = useState<Step>("service");
   const [selectedServiceIds, setSelectedServiceIds] = useState<Set<string>>(new Set());
@@ -85,6 +86,7 @@ export default function Agendar() {
   const { data: appointmentsRaw } = useQuery({
     queryKey: ["appointments", selectedDate?.toISOString()],
     enabled: !!selectedDate,
+    refetchInterval: 15000,
     queryFn: async () => {
       const dateStr = format(selectedDate!, "yyyy-MM-dd");
       const { data, error } = await supabase
@@ -96,6 +98,21 @@ export default function Agendar() {
       return data;
     },
   });
+
+  // Real-time: instantly refetch when any appointment changes (cancel, update, etc.)
+  useEffect(() => {
+    const channel = supabase
+      .channel('agendar-appointments')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'appointments' },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["appointments"] });
+        }
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [queryClient]);
 
   const { data: blockedSlots } = useQuery({
     queryKey: ["blocked_slots", selectedDate?.toISOString()],
