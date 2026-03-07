@@ -52,6 +52,7 @@ export default function Admin() {
   const [newUserPassword, setNewUserPassword] = useState("");
   const [businessNameInput, setBusinessNameInput] = useState("");
   const [slotIntervalInput, setSlotIntervalInput] = useState("30");
+  const [cancelamentoAntecedencia, setCancelamentoAntecedencia] = useState("60");
   const [serviceModalOpen, setServiceModalOpen] = useState(false);
   const [editingService, setEditingService] = useState<any>(null);
   const [serviceForm, setServiceForm] = useState({ name: "", price: "", duration_minutes: "30", buffer_minutes: "0" });
@@ -84,16 +85,17 @@ export default function Admin() {
     if (businessName) setBusinessNameInput(businessName);
   }, [businessName]);
 
-  // Fetch slot interval and background image settings
+  // Fetch slot interval and cancellation settings
   useEffect(() => {
     const fetchSettings = async () => {
       const { data } = await supabase
         .from("business_settings")
         .select("key, value")
-        .in("key", ["slot_interval_minutes"]);
+        .in("key", ["slot_interval_minutes", "cancelamento_antecedencia"]);
       if (data) {
         data.forEach((s: any) => {
           if (s.key === "slot_interval_minutes" && s.value) setSlotIntervalInput(s.value);
+          if (s.key === "cancelamento_antecedencia" && s.value) setCancelamentoAntecedencia(s.value);
         });
       }
     };
@@ -361,6 +363,32 @@ export default function Admin() {
     }
   };
 
+  const handleSaveCancelamento = async () => {
+    try {
+      const { data: existing } = await supabase
+        .from("business_settings")
+        .select("id")
+        .eq("key", "cancelamento_antecedencia")
+        .maybeSingle();
+      if (existing) {
+        const { error } = await supabase
+          .from("business_settings" as any)
+          .update({ value: cancelamentoAntecedencia } as any)
+          .eq("key", "cancelamento_antecedencia");
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("business_settings" as any)
+          .insert({ key: "cancelamento_antecedencia", value: cancelamentoAntecedencia } as any);
+        if (error) throw error;
+      }
+      const labels: Record<string, string> = { "15": "15 min", "30": "30 min", "60": "1 hora", "120": "2 horas", "240": "4 horas", "720": "12 horas", "1440": "24 horas" };
+      toast.success(`Antecedência definida para ${labels[cancelamentoAntecedencia] || cancelamentoAntecedencia + ' min'}!`);
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+  };
+
   const handleSaveSlotInterval = async () => {
     try {
       const { data: existing } = await supabase
@@ -588,7 +616,7 @@ export default function Admin() {
                       </TableHeader>
                       <TableBody>
                         {filteredAppointments?.map((a) => (
-                          <TableRow key={a.id} className="border-border">
+                          <TableRow key={a.id} className={cn("border-border transition-opacity", a.status === "cancelado" && "opacity-40")}>
                             <TableCell className="text-foreground">{format(new Date(a.appointment_date + "T12:00:00"), "dd/MM")}</TableCell>
                             <TableCell className="text-foreground">{a.appointment_time.slice(0, 5)}</TableCell>
                             <TableCell className="text-foreground">{a.client_name}</TableCell>
@@ -618,9 +646,10 @@ export default function Admin() {
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-8 w-8 text-green-500 hover:text-green-400"
-                                title="Enviar lembrete via WhatsApp"
-                                onClick={() => openWhatsApp(a.client_phone, a.client_name, a.appointment_time, a.services?.name || "corte")}
+                                disabled={a.status === "cancelado"}
+                                className={cn("h-8 w-8", a.status === "cancelado" ? "text-muted-foreground/40 cursor-default" : "text-green-500 hover:text-green-400")}
+                                title={a.status === "cancelado" ? "Atendimento cancelado" : "Enviar lembrete via WhatsApp"}
+                                onClick={() => a.status !== "cancelado" && openWhatsApp(a.client_phone, a.client_name, a.appointment_time, a.services?.name || "corte")}
                               >
                                 <MessageCircle className="h-4 w-4" />
                               </Button>
@@ -1151,6 +1180,33 @@ export default function Admin() {
                         </Select>
                         <Button onClick={handleSaveSlotInterval} variant="outline" className="gap-2">
                           <Clock className="h-4 w-4" /> Salvar Intervalo
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="border-t border-border pt-4">
+                      <label className="mb-1 block text-sm font-medium text-foreground">Antecedência para Cancelamento</label>
+                      <p className="mb-2 text-xs text-muted-foreground">Tempo mínimo antes do horário para o cliente cancelar. Cancelamentos feitos em até 5 min após o agendamento são sempre permitidos.</p>
+                      <div className="flex gap-2">
+                        <Select
+                          value={cancelamentoAntecedencia}
+                          onValueChange={(v) => setCancelamentoAntecedencia(v)}
+                        >
+                          <SelectTrigger className="w-32">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="15">15 min</SelectItem>
+                            <SelectItem value="30">30 min</SelectItem>
+                            <SelectItem value="60">1 hora</SelectItem>
+                            <SelectItem value="120">2 horas</SelectItem>
+                            <SelectItem value="240">4 horas</SelectItem>
+                            <SelectItem value="720">12 horas</SelectItem>
+                            <SelectItem value="1440">24 horas</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Button onClick={handleSaveCancelamento} variant="outline" className="gap-2">
+                          <Clock className="h-4 w-4" /> Salvar
                         </Button>
                       </div>
                     </div>
