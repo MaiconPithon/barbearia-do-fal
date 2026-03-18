@@ -15,7 +15,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { LogOut, Calendar as CalendarIcon, DollarSign, UserPlus, Home, Settings, Clock, Ban, Trash2, KeyRound, X, Shield, MessageCircle, Pencil, Palette, Star, Zap, Plus } from "lucide-react";
+import { LogOut, Calendar as CalendarIcon, DollarSign, UserPlus, Home, Settings, Clock, Ban, Trash2, KeyRound, X, Shield, MessageCircle, Pencil, Palette, Star, Zap, Plus, EyeOff, Eye } from "lucide-react";
 import { EditAppointmentModal } from "@/components/EditAppointmentModal";
 import { AppearanceTab } from "@/components/AppearanceTab";
 import { QuickSale } from "@/components/QuickSale";
@@ -56,6 +56,7 @@ export default function Admin() {
   const [serviceModalOpen, setServiceModalOpen] = useState(false);
   const [editingService, setEditingService] = useState<any>(null);
   const [serviceForm, setServiceForm] = useState({ name: "", price: "", duration_minutes: "30", buffer_minutes: "0" });
+  const [reviewFilterNota, setReviewFilterNota] = useState<string>("all");
   const { businessName } = useBusinessName();
   const appearanceSettings = useAppearance();
 
@@ -464,13 +465,47 @@ export default function Admin() {
     queryKey: ["admin-avaliacoes"],
     enabled: isAdmin === true,
     queryFn: async () => {
-      const { data, error } = await supabase.from("avaliacoes").select("estrelas");
+      const { data, error } = await supabase.from("avaliacoes").select("estrelas, hidden").eq("hidden", false);
       if (error) { console.error(error); return { average: 0, total: 0 }; }
       if (!data || data.length === 0) return { average: 0, total: 0 };
       const total = data.length;
       const sum = data.reduce((acc, curr) => acc + (curr.estrelas || 0), 0);
       return { average: Number((sum / total).toFixed(1)), total };
     },
+  });
+
+  // Full reviews list for super admin management
+  const { data: allReviews } = useQuery({
+    queryKey: ["admin-all-reviews"],
+    enabled: isSuperAdmin,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("avaliacoes")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const toggleHideReview = useMutation({
+    mutationFn: async ({ id, hidden }: { id: string; hidden: boolean }) => {
+      const { error } = await supabase.from("avaliacoes").update({ hidden } as any).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-all-reviews"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-avaliacoes"] });
+      queryClient.invalidateQueries({ queryKey: ["avaliacoes_resumo"] });
+      toast.success("Avaliação atualizada!");
+    },
+  });
+
+  const filteredReviews = allReviews?.filter((r: any) => {
+    if (reviewFilterNota === "all") return true;
+    if (reviewFilterNota === "low") return r.estrelas <= 2;
+    if (reviewFilterNota === "high") return r.estrelas >= 4;
+    return r.estrelas === Number(reviewFilterNota);
   });
 
   const todayStr = format(new Date(), "yyyy-MM-dd");
@@ -504,11 +539,12 @@ export default function Admin() {
         </div>
 
         <Tabs defaultValue="dashboard" className="w-full">
-          <TabsList className={cn("mb-6 grid w-full", isSuperAdmin ? "grid-cols-7" : "grid-cols-5")}>
+          <TabsList className={cn("mb-6 grid w-full", isSuperAdmin ? "grid-cols-8" : "grid-cols-5")}>
             <TabsTrigger value="dashboard">Agendamentos</TabsTrigger>
             <TabsTrigger value="quicksale" className="gap-1"><Zap className="h-3.5 w-3.5" />Encaixe</TabsTrigger>
             <TabsTrigger value="schedule">Agenda</TabsTrigger>
             <TabsTrigger value="services">Serviços</TabsTrigger>
+            {isSuperAdmin && <TabsTrigger value="reviews" className="gap-1"><Star className="h-3.5 w-3.5" />Avaliações</TabsTrigger>}
             {isSuperAdmin && <TabsTrigger value="team">Equipe</TabsTrigger>}
             {isSuperAdmin && <TabsTrigger value="appearance">Aparência</TabsTrigger>}
             {isSuperAdmin && <TabsTrigger value="settings">Config</TabsTrigger>}
@@ -1028,6 +1064,98 @@ export default function Admin() {
               </div>
             )}
           </TabsContent>
+
+          {/* ─── TAB: Avaliações (Super Admin only) ─── */}
+          {isSuperAdmin && (
+            <TabsContent value="reviews">
+              <Card className="border-border bg-card">
+                <CardHeader>
+                  <div className="flex items-center justify-between flex-wrap gap-3">
+                    <CardTitle className="flex items-center gap-2 text-primary">
+                      <Star className="h-5 w-5" /> Gerenciar Avaliações
+                    </CardTitle>
+                    <div className="flex items-center gap-2">
+                      <Select value={reviewFilterNota} onValueChange={setReviewFilterNota}>
+                        <SelectTrigger className="w-40 border-border">
+                          <SelectValue placeholder="Filtrar por nota" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todas as notas</SelectItem>
+                          <SelectItem value="low">⭐ 1-2 estrelas</SelectItem>
+                          <SelectItem value="high">⭐ 4-5 estrelas</SelectItem>
+                          <SelectItem value="1">1 estrela</SelectItem>
+                          <SelectItem value="2">2 estrelas</SelectItem>
+                          <SelectItem value="3">3 estrelas</SelectItem>
+                          <SelectItem value="4">4 estrelas</SelectItem>
+                          <SelectItem value="5">5 estrelas</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {!filteredReviews || filteredReviews.length === 0 ? (
+                    <p className="text-muted-foreground text-center py-8">Nenhuma avaliação encontrada.</p>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="border-border">
+                            <TableHead className="text-primary">Cliente</TableHead>
+                            <TableHead className="text-primary">Data</TableHead>
+                            <TableHead className="text-primary">Nota</TableHead>
+                            <TableHead className="text-primary">Status</TableHead>
+                            <TableHead className="text-primary w-24">Ação</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {filteredReviews.map((r: any) => (
+                            <TableRow key={r.id} className={cn("border-border", r.hidden && "opacity-40")}>
+                              <TableCell className="text-foreground font-medium">{r.nome_cliente}</TableCell>
+                              <TableCell className="text-foreground">{format(new Date(r.created_at), "dd/MM/yyyy HH:mm")}</TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-1">
+                                  {Array.from({ length: 5 }).map((_, i) => (
+                                    <Star
+                                      key={i}
+                                      className={cn(
+                                        "h-4 w-4",
+                                        i < r.estrelas ? "fill-yellow-500 text-yellow-500" : "text-muted-foreground/30"
+                                      )}
+                                    />
+                                  ))}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <Badge className={r.hidden ? "bg-red-600/20 text-red-400 border-red-600/30" : "bg-green-600/20 text-green-400 border-green-600/30"}>
+                                  {r.hidden ? "Oculta" : "Visível"}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className={cn("gap-1", r.hidden ? "text-green-400 hover:text-green-300" : "text-red-400 hover:text-red-300")}
+                                  onClick={() => toggleHideReview.mutate({ id: r.id, hidden: !r.hidden })}
+                                  disabled={toggleHideReview.isPending}
+                                >
+                                  {r.hidden ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                                  {r.hidden ? "Mostrar" : "Ocultar"}
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
+                  <p className="mt-4 text-xs text-muted-foreground">
+                    Avaliações ocultas não contam na média pública exibida no site.
+                  </p>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          )}
 
           {/* ─── TAB: Team (Super Admin only) ─── */}
           <TabsContent value="team">
