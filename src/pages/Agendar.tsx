@@ -48,7 +48,7 @@ export default function Agendar() {
   const [selectedTime, setSelectedTime] = useState<string>("");
   const [clientName, setClientName] = useState("");
   const [clientPhone, setClientPhone] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState<"pix" | "dinheiro">("pix");
+  const [paymentMethod, setPaymentMethod] = useState<"pix" | "dinheiro">("dinheiro");
   const [hoveredRating, setHoveredRating] = useState(0);
   const [submittedRating, setSubmittedRating] = useState(false);
 
