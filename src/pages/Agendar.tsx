@@ -423,10 +423,6 @@ export default function Agendar() {
     return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`;
   };
 
-  const whatsappComprovante = () => {
-    const msg = `Olá! Segue o comprovante do Pix para o agendamento:\n\n👤 Nome: ${clientName}\n✂️ Serviço: ${serviceDescription}\n💵 Valor: R$ ${totalPrice.toFixed(2).replace(".", ",")}`;
-    return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`;
-  };
 
   // Selected time warning
   const selectedTimeWarning = selectedTime
