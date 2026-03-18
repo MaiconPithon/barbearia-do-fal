@@ -735,38 +735,16 @@ export default function Agendar() {
           <div>
             <h2 className="mb-4 text-lg font-semibold text-primary">Forma de Pagamento</h2>
             <div className="space-y-2">
-              <button
-                onClick={() => setPaymentMethod("pix")}
-                className={cn(
-                  "flex w-full items-center gap-3 rounded-lg border px-5 py-4 text-left transition-colors",
-                  paymentMethod === "pix" ? "border-[#d1b122] bg-[#d1b122]/10" : "border-border bg-secondary"
-                )}
-              >
-                <span>💎</span>
-                <span className="font-medium text-foreground">Pix</span>
-              </button>
-              <button
-                onClick={() => setPaymentMethod("dinheiro")}
-                className={cn(
-                  "flex w-full items-center gap-3 rounded-lg border px-5 py-4 text-left transition-colors",
-                  paymentMethod === "dinheiro" ? "border-[#d1b122] bg-[#d1b122]/10" : "border-border bg-secondary"
-                )}
+              <div
+                className="flex w-full items-center gap-3 rounded-lg border border-[#d1b122] bg-[#d1b122]/10 px-5 py-4"
               >
                 <span>💵</span>
-                <span className="font-medium text-foreground">Dinheiro (pagar no local)</span>
-              </button>
-            </div>
-
-            {paymentMethod === "pix" && (
-              <div className="mt-6">
-                <PixPayment
-                  valor={`R$ ${totalPrice.toFixed(2).replace(".", ",")}`}
-                  onSendComprovante={() => {
-                    window.open(whatsappComprovante(), "_blank");
-                  }}
-                />
+                <span className="font-medium text-foreground">Pagar no Local</span>
               </div>
-            )}
+            </div>
+            <p className="mt-3 text-sm text-muted-foreground text-center">
+              Aceitamos Dinheiro e Pix diretamente na barbearia.
+            </p>
           </div>
         )}
 
