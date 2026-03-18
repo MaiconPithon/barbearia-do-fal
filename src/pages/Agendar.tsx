@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input";
 import { Calendar } from "@/components/ui/calendar";
 import { Checkbox } from "@/components/ui/checkbox";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
-import { PixPayment } from "@/components/PixPayment";
 import { ArrowLeft, ChevronRight, Check, MessageCircle, Star, Clock, AlertTriangle, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -48,7 +47,7 @@ export default function Agendar() {
   const [selectedTime, setSelectedTime] = useState<string>("");
   const [clientName, setClientName] = useState("");
   const [clientPhone, setClientPhone] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState<"pix" | "dinheiro">("pix");
+  const [paymentMethod, setPaymentMethod] = useState<"pix" | "dinheiro">("dinheiro");
   const [hoveredRating, setHoveredRating] = useState(0);
   const [submittedRating, setSubmittedRating] = useState(false);
 
@@ -330,15 +329,29 @@ export default function Agendar() {
     mutationFn: async () => {
       const firstServiceId = selectedServices[0]?.id;
       if (!firstServiceId) throw new Error("Selecione ao menos um serviço");
+
+      // Check for duplicate appointment at the same date/time
+      const dateStr = format(selectedDate!, "yyyy-MM-dd");
+      const { data: existing, error: checkError } = await supabase
+        .from("appointments")
+        .select("id")
+        .eq("appointment_date", dateStr)
+        .eq("appointment_time", selectedTime)
+        .in("status", ["pendente", "confirmado"]);
+      if (checkError) throw checkError;
+      if (existing && existing.length > 0) {
+        throw new Error("Este horário já está ocupado. Por favor, escolha outro horário.");
+      }
+
       const { data, error } = await supabase
         .from("appointments")
         .insert({
           client_name: clientName,
           client_phone: clientPhone,
           service_id: firstServiceId,
-          appointment_date: format(selectedDate!, "yyyy-MM-dd"),
+          appointment_date: dateStr,
           appointment_time: selectedTime,
-          payment_method: paymentMethod,
+          payment_method: "dinheiro" as any,
           price: totalPrice,
           service_description: serviceDescription,
         } as any)
@@ -352,12 +365,11 @@ export default function Agendar() {
       toast.success("Agendamento realizado com sucesso!");
       const dateStr = selectedDate ? format(selectedDate, "dd/MM/yyyy") : "";
       const valor = `R$ ${totalPrice.toFixed(2).replace(".", ",")}`;
-      const pixReminder = paymentMethod === "pix" ? "\n\n⚠️ Lembre-se de enviar o comprovante do Pix para garantir sua vaga!" : "";
-      const barberMsg = `🔔 *Novo Agendamento!*\n\n👤 Cliente: ${clientName}\n📱 Tel: ${clientPhone}\n✂️ Serviço: ${serviceDescription}\n📅 Data: ${dateStr} às ${selectedTime}\n💰 Valor: ${valor}\n💳 Pagamento: ${paymentMethod === "pix" ? "Pix" : "Dinheiro"}${pixReminder}`;
+      const barberMsg = `🔔 *Novo Agendamento!*\n\n👤 Cliente: ${clientName}\n📱 Tel: ${clientPhone}\n✂️ Serviço: ${serviceDescription}\n📅 Data: ${dateStr} às ${selectedTime}\n💰 Valor: ${valor}\n💳 Pagamento: Pagar no Local`;
       window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(barberMsg)}`, "_blank");
     },
-    onError: () => {
-      toast.error("Erro ao agendar. Tente novamente.");
+    onError: (err: any) => {
+      toast.error(err?.message || "Erro ao agendar. Tente novamente.");
     },
   });
 
@@ -411,10 +423,6 @@ export default function Agendar() {
     return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`;
   };
 
-  const whatsappComprovante = () => {
-    const msg = `Olá! Segue o comprovante do Pix para o agendamento:\n\n👤 Nome: ${clientName}\n✂️ Serviço: ${serviceDescription}\n💵 Valor: R$ ${totalPrice.toFixed(2).replace(".", ",")}`;
-    return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`;
-  };
 
   // Selected time warning
   const selectedTimeWarning = selectedTime
@@ -721,38 +729,16 @@ export default function Agendar() {
           <div>
             <h2 className="mb-4 text-lg font-semibold text-primary">Forma de Pagamento</h2>
             <div className="space-y-2">
-              <button
-                onClick={() => setPaymentMethod("pix")}
-                className={cn(
-                  "flex w-full items-center gap-3 rounded-lg border px-5 py-4 text-left transition-colors",
-                  paymentMethod === "pix" ? "border-[#d1b122] bg-[#d1b122]/10" : "border-border bg-secondary"
-                )}
-              >
-                <span>💎</span>
-                <span className="font-medium text-foreground">Pix</span>
-              </button>
-              <button
-                onClick={() => setPaymentMethod("dinheiro")}
-                className={cn(
-                  "flex w-full items-center gap-3 rounded-lg border px-5 py-4 text-left transition-colors",
-                  paymentMethod === "dinheiro" ? "border-[#d1b122] bg-[#d1b122]/10" : "border-border bg-secondary"
-                )}
+              <div
+                className="flex w-full items-center gap-3 rounded-lg border border-[#d1b122] bg-[#d1b122]/10 px-5 py-4"
               >
                 <span>💵</span>
-                <span className="font-medium text-foreground">Dinheiro (pagar no local)</span>
-              </button>
-            </div>
-
-            {paymentMethod === "pix" && (
-              <div className="mt-6">
-                <PixPayment
-                  valor={`R$ ${totalPrice.toFixed(2).replace(".", ",")}`}
-                  onSendComprovante={() => {
-                    window.open(whatsappComprovante(), "_blank");
-                  }}
-                />
+                <span className="font-medium text-foreground">Pagar no Local</span>
               </div>
-            )}
+            </div>
+            <p className="mt-3 text-sm text-muted-foreground text-center">
+              Aceitamos Dinheiro e Pix diretamente na barbearia.
+            </p>
           </div>
         )}
 
@@ -767,7 +753,7 @@ export default function Agendar() {
               <p className="text-sm text-foreground"><span className="text-muted-foreground">Horário: </span><strong>{selectedTime}</strong></p>
               <p className="text-sm text-foreground"><span className="text-muted-foreground">Serviço: </span><strong>{serviceDescription}</strong></p>
               <p className="text-sm text-foreground"><span className="text-muted-foreground">Duração: </span><strong>{totalDuration} min</strong></p>
-              <p className="text-sm text-foreground"><span className="text-muted-foreground">Pagamento: </span><strong>{paymentMethod === "pix" ? "Pix" : "Dinheiro"}</strong></p>
+              <p className="text-sm text-foreground"><span className="text-muted-foreground">Pagamento: </span><strong>Pagar no Local</strong></p>
               <div className="border-t border-border pt-2 mt-2">
                 <p className="text-sm"><span className="text-muted-foreground">Total: </span><span className="font-bold text-[#d1b122]">R$ {totalPrice.toFixed(2).replace(".", ",")}</span></p>
               </div>
@@ -793,7 +779,7 @@ export default function Agendar() {
               <p className="text-sm"><span className="text-muted-foreground">Serviço:</span> <strong>{serviceDescription}</strong></p>
               <p className="text-sm"><span className="text-muted-foreground">Data:</span> <strong>{selectedDate && format(selectedDate, "dd/MM/yyyy")}</strong></p>
               <p className="text-sm"><span className="text-muted-foreground">Horário:</span> <strong>{selectedTime}</strong></p>
-              <p className="text-sm"><span className="text-muted-foreground">Pagamento:</span> <strong>{paymentMethod === "pix" ? "Pix" : "Dinheiro"}</strong></p>
+              <p className="text-sm"><span className="text-muted-foreground">Pagamento:</span> <strong>Pagar no Local</strong></p>
               <div className="border-t border-border pt-2 mt-2">
                 <p className="text-sm"><span className="text-muted-foreground">Total:</span> <span className="font-bold text-[#d1b122]">R$ {totalPrice.toFixed(2).replace(".", ",")}</span></p>
               </div>
