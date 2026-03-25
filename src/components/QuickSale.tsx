@@ -13,6 +13,12 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 
+// Convert "HH:MM" to minutes
+const toMin = (t: string) => {
+  const [h, m] = t.split(":").map(Number);
+  return h * 60 + m;
+};
+
 interface CartItem {
   name: string;
   price: number;
@@ -97,16 +103,49 @@ export function QuickSale() {
       const dateStr = format(selectedDate, "yyyy-MM-dd");
       const timeStr = `${selectedHour}:${selectedMinute}`;
 
-      // Check for duplicate appointment
-      const { data: existing, error: checkError } = await supabase
+      // Calculate total duration from catalog services in cart
+      const totalDuration = cart.reduce((sum, item) => {
+        if (item.serviceId) {
+          const svc = services?.find((s) => s.id === item.serviceId);
+          return sum + (svc?.duration_minutes || 30);
+        }
+        return sum + 30; // default 30 min for custom items
+      }, 0);
+
+      const startMinutes = parseInt(selectedHour) * 60 + parseInt(selectedMinute);
+      const endMinutes = startMinutes + totalDuration;
+
+      // Check for overlapping appointments (time range collision)
+      const { data: existingAppts, error: checkError } = await supabase
         .from("appointments")
-        .select("id")
+        .select("appointment_time, service_id, actual_end_time, services(duration_minutes, buffer_minutes)")
         .eq("appointment_date", dateStr)
-        .eq("appointment_time", timeStr)
         .in("status", ["pendente", "confirmado"]);
       if (checkError) throw checkError;
-      if (existing && existing.length > 0) {
-        toast.error("Este horário já está ocupado. Por favor, escolha outro minuto para o encaixe.");
+
+      let hasOverlap = false;
+      let overlapEndTime = "";
+      for (const appt of existingAppts || []) {
+        const aStart = toMin(appt.appointment_time.slice(0, 5));
+        let aEnd: number;
+        if (appt.actual_end_time) {
+          aEnd = toMin(appt.actual_end_time.slice(0, 5));
+        } else {
+          const dur = (appt as any).services?.duration_minutes ?? 30;
+          const buf = (appt as any).services?.buffer_minutes ?? 0;
+          aEnd = aStart + dur + buf;
+        }
+        if (startMinutes < aEnd && endMinutes > aStart) {
+          hasOverlap = true;
+          const h = String(Math.floor(aEnd / 60) % 24).padStart(2, "0");
+          const m = String(aEnd % 60).padStart(2, "0");
+          overlapEndTime = `${h}:${m}`;
+          break;
+        }
+      }
+
+      if (hasOverlap) {
+        toast.error(`Este período já está ocupado por outro serviço. Escolha um horário após as ${overlapEndTime}.`);
         setSubmitting(false);
         return;
       }
@@ -120,21 +159,8 @@ export function QuickSale() {
         return;
       }
 
-      // Calculate total duration from catalog services in cart
-      const totalDuration = cart.reduce((sum, item) => {
-        if (item.serviceId) {
-          const svc = services?.find((s) => s.id === item.serviceId);
-          return sum + (svc?.duration_minutes || 30);
-        }
-        return sum + 30; // default 30 min for custom items
-      }, 0);
-
-      // Calculate actual end time
-      const startMinutes = parseInt(selectedHour) * 60 + parseInt(selectedMinute);
-      const endMinutes = startMinutes + totalDuration;
       const endH = String(Math.floor(endMinutes / 60) % 24).padStart(2, "0");
       const endM = String(endMinutes % 60).padStart(2, "0");
-      const actualEndTime = `${endH}:${endM}`;
 
       const { error } = await supabase.from("appointments").insert({
         client_name: clientName.trim(),
