@@ -197,10 +197,14 @@ export default function Agendar() {
   const disabledDays = (date: Date) => {
     if (isBefore(date, startOfDay(new Date()))) return true;
     if (isAfter(date, maxDate)) return true;
+    const dateStr = format(date, "yyyy-MM-dd");
+    // Check override first
+    const override = (scheduleOverrides || []).find((o: any) => o.override_date === dateStr);
+    if (override) return override.is_blocked;
+    // Fall back to weekly config
     const dow = getDay(date);
     const config = scheduleConfig?.find((c) => c.day_of_week === dow);
     if (!config?.is_open) return true;
-    const dateStr = format(date, "yyyy-MM-dd");
     if (allBlockedDates?.has(dateStr)) return true;
     return false;
   };
