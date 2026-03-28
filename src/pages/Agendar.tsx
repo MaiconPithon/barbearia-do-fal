@@ -191,6 +191,8 @@ export default function Agendar() {
       }
     : weeklyConfig;
 
+  const maxDate = addDays(startOfDay(new Date()), 7);
+
 
   const disabledDays = (date: Date) => {
     if (isBefore(date, startOfDay(new Date()))) return true;
