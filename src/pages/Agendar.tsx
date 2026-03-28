@@ -69,6 +69,15 @@ export default function Agendar() {
     },
   });
 
+  const { data: scheduleOverrides } = useQuery({
+    queryKey: ["schedule_overrides"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("schedule_overrides" as any).select("*");
+      if (error) throw error;
+      return data as any[];
+    },
+  });
+
   const { data: businessSettings } = useQuery({
     queryKey: ["business_settings"],
     queryFn: async () => {
