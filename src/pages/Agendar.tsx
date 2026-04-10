@@ -842,13 +842,13 @@ export default function Agendar() {
             </div>
             <h2 className="mb-4 text-2xl font-bold text-[#d1b122]">Agendado!</h2>
             <div className="mb-6 space-y-1 rounded-lg border border-border bg-card p-5 text-left">
-              <p className="text-sm"><span className="text-muted-foreground">Nome:</span> <strong>{clientName}</strong></p>
-              <p className="text-sm"><span className="text-muted-foreground">Serviço:</span> <strong>{serviceDescription}</strong></p>
-              <p className="text-sm"><span className="text-muted-foreground">Data:</span> <strong>{selectedDate && format(selectedDate, "dd/MM/yyyy")}</strong></p>
-              <p className="text-sm"><span className="text-muted-foreground">Horário:</span> <strong>{selectedTime}</strong></p>
+              <p className="text-sm"><span className="text-muted-foreground">Nome:</span> <strong>{clientName || "—"}</strong></p>
+              <p className="text-sm"><span className="text-muted-foreground">Serviço:</span> <strong>{serviceDescription || "—"}</strong></p>
+              <p className="text-sm"><span className="text-muted-foreground">Data:</span> <strong>{selectedDate ? format(selectedDate, "dd/MM/yyyy") : "—"}</strong></p>
+              <p className="text-sm"><span className="text-muted-foreground">Horário:</span> <strong>{selectedTime || "—"}</strong></p>
               <p className="text-sm"><span className="text-muted-foreground">Pagamento:</span> <strong>Pagar no Local</strong></p>
               <div className="border-t border-border pt-2 mt-2">
-                <p className="text-sm"><span className="text-muted-foreground">Total:</span> <span className="font-bold text-[#d1b122]">R$ {totalPrice.toFixed(2).replace(".", ",")}</span></p>
+                <p className="text-sm"><span className="text-muted-foreground">Total:</span> <span className="font-bold text-[#d1b122]">R$ {(totalPrice ?? 0).toFixed(2).replace(".", ",")}</span></p>
               </div>
             </div>
             <a href={whatsappMessage()} target="_blank" rel="noopener noreferrer" className="block mb-6">
