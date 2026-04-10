@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Calendar } from "@/components/ui/calendar";
 import { Checkbox } from "@/components/ui/checkbox";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
-import { ArrowLeft, ChevronRight, Check, MessageCircle, Star, Clock, AlertTriangle, X } from "lucide-react";
+import { ArrowLeft, ChevronRight, Check, MessageCircle, Star, Clock, AlertTriangle, X, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { format, getDay, isBefore, startOfDay, addDays, isAfter, isToday } from "date-fns";
@@ -359,18 +359,30 @@ export default function Agendar() {
 
   const createAppointment = useMutation({
     mutationFn: async () => {
-      try {
-        const firstServiceId = selectedServices[0]?.id;
-        if (!firstServiceId) throw new Error("Selecione ao menos um serviço");
+      // --- Pre-flight validation ---
+      if (!clientName?.trim()) throw new Error("Informe seu nome.");
+      if (!clientPhone?.trim()) throw new Error("Informe seu telefone.");
+      if (!selectedDate) throw new Error("Selecione uma data.");
+      if (!selectedTime) throw new Error("Selecione um horário.");
+      if (!selectedServices?.length) throw new Error("Selecione ao menos um serviço.");
+      if (!totalServiceSpan || totalServiceSpan <= 0) throw new Error("Duração inválida. Selecione os serviços novamente.");
 
-        // Check for overlapping appointments (time range collision)
-        const dateStr = format(selectedDate!, "yyyy-MM-dd");
+      const firstServiceId = selectedServices[0]?.id;
+      if (!firstServiceId) throw new Error("Serviço inválido. Tente novamente.");
+
+      const dateStr = format(selectedDate, "yyyy-MM-dd");
+
+      try {
+        // Check for overlapping appointments
         const { data: existingAppts, error: checkError } = await supabase
           .from("appointments")
           .select("appointment_time, service_id, actual_end_time, total_duration, services(duration_minutes, buffer_minutes)")
           .eq("appointment_date", dateStr)
           .in("status", ["pendente", "confirmado"]);
-        if (checkError) throw checkError;
+        if (checkError) {
+          console.error('Supabase overlap check error:', checkError);
+          throw new Error("Erro ao verificar disponibilidade. Verifique sua conexão.");
+        }
 
         const newStart = toMin(selectedTime);
         const newEnd = newStart + totalServiceSpan;
@@ -395,31 +407,32 @@ export default function Agendar() {
         const { data, error } = await supabase
           .from("appointments")
           .insert({
-            client_name: clientName,
-            client_phone: clientPhone,
+            client_name: clientName.trim(),
+            client_phone: clientPhone.trim(),
             service_id: firstServiceId,
             appointment_date: dateStr,
             appointment_time: selectedTime,
             payment_method: "dinheiro" as any,
-            price: totalPrice,
-            service_description: serviceDescription,
+            price: totalPrice ?? 0,
+            service_description: serviceDescription || "",
             total_duration: totalServiceSpan,
           } as any)
           .select()
           .single();
 
         if (error) {
-          console.error('Supabase insert error:', error);
-          throw new Error('Ocorreu um erro ao agendar. Por favor, tente novamente.');
+          console.error('Supabase insert error:', JSON.stringify(error));
+          throw new Error("Erro ao processar agendamento. Verifique sua conexão.");
         }
 
         if (!data?.id) {
-          throw new Error('Agendamento não pôde ser concluído. Tente novamente.');
+          console.error('Insert returned no data:', data);
+          throw new Error("Agendamento não pôde ser concluído. Tente novamente.");
         }
 
         return data;
       } catch (err: any) {
-        console.error('Booking error:', err);
+        console.error('Booking error details:', err?.message, err?.code, err);
         throw err;
       }
     },
@@ -912,7 +925,9 @@ export default function Agendar() {
             onClick={handleContinue}
           >
             {step === "confirm"
-              ? createAppointment.isPending ? "Agendando..." : "Confirmar Agendamento"
+              ? createAppointment.isPending 
+                ? <><Loader2 className="h-4 w-4 animate-spin" /> Agendando...</>
+                : "Confirmar Agendamento"
               : <>Continuar <ChevronRight className="h-4 w-4" /></>
             }
           </Button>
