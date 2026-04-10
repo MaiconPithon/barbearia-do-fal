@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Calendar } from "@/components/ui/calendar";
 import { Checkbox } from "@/components/ui/checkbox";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
-import { ArrowLeft, ChevronRight, Check, MessageCircle, Star, Clock, AlertTriangle, X } from "lucide-react";
+import { ArrowLeft, ChevronRight, Check, MessageCircle, Star, Clock, AlertTriangle, X, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { format, getDay, isBefore, startOfDay, addDays, isAfter, isToday } from "date-fns";
@@ -925,7 +925,9 @@ export default function Agendar() {
             onClick={handleContinue}
           >
             {step === "confirm"
-              ? createAppointment.isPending ? "Agendando..." : "Confirmar Agendamento"
+              ? createAppointment.isPending 
+                ? <><Loader2 className="h-4 w-4 animate-spin" /> Agendando...</>
+                : "Confirmar Agendamento"
               : <>Continuar <ChevronRight className="h-4 w-4" /></>
             }
           </Button>
