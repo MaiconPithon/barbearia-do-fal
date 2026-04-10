@@ -359,57 +359,75 @@ export default function Agendar() {
 
   const createAppointment = useMutation({
     mutationFn: async () => {
-      const firstServiceId = selectedServices[0]?.id;
-      if (!firstServiceId) throw new Error("Selecione ao menos um serviço");
+      try {
+        const firstServiceId = selectedServices[0]?.id;
+        if (!firstServiceId) throw new Error("Selecione ao menos um serviço");
 
-      // Check for overlapping appointments (time range collision)
-      const dateStr = format(selectedDate!, "yyyy-MM-dd");
-      const { data: existingAppts, error: checkError } = await supabase
-        .from("appointments")
-        .select("appointment_time, service_id, actual_end_time, total_duration, services(duration_minutes, buffer_minutes)")
-        .eq("appointment_date", dateStr)
-        .in("status", ["pendente", "confirmado"]);
-      if (checkError) throw checkError;
+        // Check for overlapping appointments (time range collision)
+        const dateStr = format(selectedDate!, "yyyy-MM-dd");
+        const { data: existingAppts, error: checkError } = await supabase
+          .from("appointments")
+          .select("appointment_time, service_id, actual_end_time, total_duration, services(duration_minutes, buffer_minutes)")
+          .eq("appointment_date", dateStr)
+          .in("status", ["pendente", "confirmado"]);
+        if (checkError) throw checkError;
 
-      const newStart = toMin(selectedTime);
-      const newEnd = newStart + totalServiceSpan;
+        const newStart = toMin(selectedTime);
+        const newEnd = newStart + totalServiceSpan;
 
-      for (const appt of existingAppts || []) {
-        const aStart = toMin(appt.appointment_time.slice(0, 5));
-        let aEnd: number;
-        if (appt.actual_end_time) {
-          aEnd = toMin(appt.actual_end_time.slice(0, 5));
-        } else if ((appt as any).total_duration) {
-          aEnd = aStart + (appt as any).total_duration;
-        } else {
-          const dur = (appt as any).services?.duration_minutes ?? 30;
-          const buf = (appt as any).services?.buffer_minutes ?? 0;
-          aEnd = aStart + dur + buf;
+        for (const appt of existingAppts || []) {
+          const aStart = toMin(appt.appointment_time.slice(0, 5));
+          let aEnd: number;
+          if (appt.actual_end_time) {
+            aEnd = toMin(appt.actual_end_time.slice(0, 5));
+          } else if ((appt as any).total_duration) {
+            aEnd = aStart + (appt as any).total_duration;
+          } else {
+            const dur = (appt as any).services?.duration_minutes ?? 30;
+            const buf = (appt as any).services?.buffer_minutes ?? 0;
+            aEnd = aStart + dur + buf;
+          }
+          if (newStart < aEnd && newEnd > aStart) {
+            throw new Error(`Este período já está ocupado por outro serviço. Escolha um horário após as ${toTime(aEnd)}.`);
+          }
         }
-        if (newStart < aEnd && newEnd > aStart) {
-          throw new Error(`Este período já está ocupado por outro serviço. Escolha um horário após as ${toTime(aEnd)}.`);
+
+        const { data, error } = await supabase
+          .from("appointments")
+          .insert({
+            client_name: clientName,
+            client_phone: clientPhone,
+            service_id: firstServiceId,
+            appointment_date: dateStr,
+            appointment_time: selectedTime,
+            payment_method: "dinheiro" as any,
+            price: totalPrice,
+            service_description: serviceDescription,
+            total_duration: totalServiceSpan,
+          } as any)
+          .select()
+          .single();
+
+        if (error) {
+          console.error('Supabase insert error:', error);
+          throw new Error('Ocorreu um erro ao agendar. Por favor, tente novamente.');
         }
+
+        if (!data?.id) {
+          throw new Error('Agendamento não pôde ser concluído. Tente novamente.');
+        }
+
+        return data;
+      } catch (err: any) {
+        console.error('Booking error:', err);
+        throw err;
       }
-
-      const { data, error } = await supabase
-        .from("appointments")
-        .insert({
-          client_name: clientName,
-          client_phone: clientPhone,
-          service_id: firstServiceId,
-          appointment_date: dateStr,
-          appointment_time: selectedTime,
-          payment_method: "dinheiro" as any,
-          price: totalPrice,
-          service_description: serviceDescription,
-          total_duration: totalServiceSpan,
-        } as any)
-        .select()
-        .single();
-      if (error) throw error;
-      return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      if (!data?.id) {
+        toast.error("Erro ao confirmar agendamento. Tente novamente.");
+        return;
+      }
       setStep("confirmed");
       toast.success("Agendamento realizado com sucesso!");
       const dateStr = selectedDate ? format(selectedDate, "dd/MM/yyyy") : "";
