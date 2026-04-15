@@ -1,16 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Chaves novas da Barbearia do Fal (Projeto qhly...)
-const supabaseUrl = "https://qhlyjvaqfkrjmsybrezs.supabase.co";
-const supabaseAnonKey = "sb_publishable_CvdXC_CkwIAQ1MTqgAYAEw_LWs4-O4d";
+// Voltando para o padrão de variáveis de ambiente
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    storage: localStorage,
-    persistSession: true,
-    autoRefreshToken: true,
-  }
-});
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.warn("Atenção: Variáveis do Supabase não encontradas. Verifique o seu .env ou as configurações da Vercel.");
+}
 
-// Log para confirmar que o sistema está lendo o banco certo (pode ver no console do navegador)
-console.log("Supabase inicializado com sucesso no projeto: qhly");
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
