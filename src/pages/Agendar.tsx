@@ -13,6 +13,7 @@ import { format, getDay, isBefore, startOfDay, addDays, isAfter, isToday } from 
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { useAppearance } from "@/hooks/useAppearance";
+import type { Enums, TablesInsert } from "@/integrations/supabase/types";
 
 type Step = "service" | "date" | "time" | "info" | "payment" | "confirm" | "confirmed";
 
@@ -56,7 +57,7 @@ export default function Agendar() {
   const [selectedTime, setSelectedTime] = useState<string>("");
   const [clientName, setClientName] = useState("");
   const [clientPhone, setClientPhone] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState<"pix" | "dinheiro">("dinheiro");
+  const [paymentMethod, setPaymentMethod] = useState<Enums<"payment_method">>("dinheiro");
   const [hoveredRating, setHoveredRating] = useState(0);
   const [submittedRating, setSubmittedRating] = useState(false);
   const [isSubmittingCheckout, setIsSubmittingCheckout] = useState(false);
@@ -65,7 +66,11 @@ export default function Agendar() {
   const { data: services } = useQuery({
     queryKey: ["services"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("services").select("*").order("sort_order");
+      const { data, error } = await supabase
+        .from("services")
+        .select("*")
+        .eq("active", true)
+        .order("sort_order");
       if (error) throw error;
       return data;
     },
@@ -420,21 +425,23 @@ export default function Agendar() {
           }
         }
 
+        const appointmentPayload: TablesInsert<"appointments"> = {
+          client_name: clientName.trim(),
+          client_phone: clientPhone.trim(),
+          service_id: firstServiceId,
+          appointment_date: dateStr,
+          appointment_time: selectedTime,
+          payment_method: paymentMethod,
+          price: totalPrice ?? 0,
+          service_description: serviceDescription || "",
+          total_duration: totalServiceSpan,
+        };
+
         const { data, error } = await supabase
           .from("appointments")
-          .insert({
-            client_name: clientName.trim(),
-            client_phone: clientPhone.trim(),
-            service_id: firstServiceId,
-            appointment_date: dateStr,
-            appointment_time: selectedTime,
-            payment_method: paymentMethod as any,
-            price: totalPrice ?? 0,
-            service_description: serviceDescription || "",
-            total_duration: totalServiceSpan,
-          } as any)
+          .insert(appointmentPayload)
           .select()
-          .single();
+          .maybeSingle();
 
         if (error) throw error;
 

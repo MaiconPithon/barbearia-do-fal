@@ -10,6 +10,7 @@ export function PriceTable() {
       const { data, error } = await supabase
         .from("services")
         .select("*")
+        .eq("active", true)
         .order("sort_order");
       if (error) throw error;
       return data;
@@ -41,7 +42,7 @@ export function PriceTable() {
                   <TableRow key={s.id} className="border-border">
                     <TableCell className="font-medium text-foreground">{s.name}</TableCell>
                     <TableCell className="text-right font-semibold text-primary">
-                      R$ {s.price.toFixed(2).replace(".", ",")}
+                      R$ {Number(s.price).toFixed(2).replace(".", ",")}
                     </TableCell>
                   </TableRow>
                 ))}
