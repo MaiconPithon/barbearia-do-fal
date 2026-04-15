@@ -9,7 +9,7 @@ export function useBusinessName() {
         .from("business_settings" as any)
         .select("value")
         .eq("key", "business_name")
-        .single();
+        .maybeSingle();
       if (error) return "Barbearia";
       return (data as any)?.value || "Barbearia";
     },

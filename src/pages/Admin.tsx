@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
+import { SUPABASE_KEY, SUPABASE_URL, supabase } from "@/lib/supabaseClient";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -35,6 +35,8 @@ const statusColors: Record<string, string> = {
   finalizado: "bg-green-600/20 text-green-400 border-green-600/30",
   cancelado: "bg-red-600/20 text-red-400 border-red-600/30",
 };
+
+const FUNCTIONS_BASE_URL = `${SUPABASE_URL}/functions/v1`;
 
 export default function Admin() {
   const navigate = useNavigate();
@@ -75,15 +77,16 @@ export default function Admin() {
         .from("user_roles")
         .select("role")
         .eq("user_id", user.id);
-      if (!roles || roles.length === 0) {
+      const roleNames = (roles || []).map(({ role }) => role);
+      const hasAdminRole = roleNames.includes("admin") || roleNames.includes("super_admin");
+
+      if (!hasAdminRole) {
         toast.error("Sem permissão de administrador.");
         navigate("/admin-login");
         return;
       }
-      const userRole = roles[0].role;
-      if (userRole === "super_admin") {
-        setIsSuperAdmin(true);
-      }
+
+      setIsSuperAdmin(roleNames.includes("super_admin"));
       setIsAdmin(true);
     };
     checkAdmin();
@@ -218,13 +221,13 @@ export default function Admin() {
     queryFn: async () => {
       const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/manage-admin-user`,
+        `${FUNCTIONS_BASE_URL}/manage-admin-user`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${session?.access_token}`,
-            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            apikey: SUPABASE_KEY,
           },
           body: JSON.stringify({ action: "list" }),
         }
@@ -350,13 +353,13 @@ export default function Admin() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-admin-user`,
+        `${FUNCTIONS_BASE_URL}/create-admin-user`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${session?.access_token}`,
-            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            apikey: SUPABASE_KEY,
           },
           body: JSON.stringify({ email: newEmail, password: newPassword }),
         }
@@ -381,13 +384,13 @@ export default function Admin() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/manage-admin-user`,
+        `${FUNCTIONS_BASE_URL}/manage-admin-user`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${session?.access_token}`,
-            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            apikey: SUPABASE_KEY,
           },
           body: JSON.stringify({ action: "update_password", user_id: userId, password: newUserPassword }),
         }
@@ -407,13 +410,13 @@ export default function Admin() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/manage-admin-user`,
+        `${FUNCTIONS_BASE_URL}/manage-admin-user`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${session?.access_token}`,
-            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            apikey: SUPABASE_KEY,
           },
           body: JSON.stringify({ action: "delete", user_id: userId }),
         }
