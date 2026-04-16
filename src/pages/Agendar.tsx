@@ -463,10 +463,15 @@ export default function Agendar() {
       }
       setStep("confirmed");
       toast.success("Agendamento realizado com sucesso!");
-      const dateStr = selectedDate ? format(selectedDate, "dd/MM/yyyy") : "";
-      const valor = `R$ ${totalPrice.toFixed(2).replace(".", ",")}`;
-      const barberMsg = `🔔 *Novo Agendamento!*\n\n👤 Cliente: ${clientName}\n📱 Tel: ${clientPhone}\n✂️ Serviço: ${serviceDescription}\n📅 Data: ${dateStr} às ${selectedTime}\n💰 Valor: ${valor}\n💳 Pagamento: Pagar no Local`;
-      window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(barberMsg)}`, "_blank");
+      // Notificar barbeiro via WhatsApp em background (não bloqueia UI se popup falhar)
+      try {
+        const dateStr = selectedDate ? format(selectedDate, "dd/MM/yyyy") : "";
+        const valor = `R$ ${totalPrice.toFixed(2).replace(".", ",")}`;
+        const barberMsg = `🔔 *Novo Agendamento!*\n\n👤 Cliente: ${clientName}\n📱 Tel: ${clientPhone}\n✂️ Serviço: ${serviceDescription}\n📅 Data: ${dateStr} às ${selectedTime}\n💰 Valor: ${valor}\n💳 Pagamento: Pagar no Local`;
+        window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(barberMsg)}`, "_blank");
+      } catch (e) {
+        console.warn("Notificação WhatsApp não pôde ser aberta automaticamente:", e);
+      }
     },
     onError: (error: unknown) => {
       const message = error instanceof Error ? error.message : GENERIC_BOOKING_ERROR;
