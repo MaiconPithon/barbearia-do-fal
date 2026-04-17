@@ -966,22 +966,25 @@ export default function Agendar() {
             </a>
 
             {!submittedRating ? (
-              <div className="mb-6 rounded-lg border border-border bg-card p-5 text-center transition-all">
-                <h3 className="mb-3 text-lg font-bold text-foreground">Avalie sua Experiência</h3>
-                <div className="flex justify-center gap-2">
+              <div className="mb-6 rounded-2xl border border-[#d1b122]/20 bg-gradient-to-b from-card to-card/60 p-5 text-center shadow-sm transition-all">
+                <h3 className="mb-1 text-base font-semibold text-foreground">Sua avaliação é muito importante para mim! 🚀</h3>
+                <p className="mb-4 text-xs text-muted-foreground">Avalie com estrelas (totalmente opcional)</p>
+                <div className="mb-4 flex justify-center gap-1.5">
                   {[1, 2, 3, 4, 5].map((star) => (
                     <button
                       key={star}
+                      type="button"
                       disabled={submitRating.isPending}
                       onMouseEnter={() => setHoveredRating(star)}
                       onMouseLeave={() => setHoveredRating(0)}
-                      onClick={() => submitRating.mutate(star)}
-                      className="transition-transform hover:scale-110 focus:outline-none"
+                      onClick={() => setFeedbackStars(star)}
+                      className="transition-transform hover:scale-110 focus:outline-none disabled:opacity-50"
+                      aria-label={`${star} estrela${star > 1 ? "s" : ""}`}
                     >
                       <Star
                         className={cn(
-                          "h-10 w-10 transition-colors",
-                          hoveredRating >= star
+                          "h-9 w-9 transition-colors",
+                          (hoveredRating || feedbackStars) >= star
                             ? "fill-yellow-500 text-yellow-500"
                             : "text-muted-foreground/30"
                         )}
@@ -989,10 +992,27 @@ export default function Agendar() {
                     </button>
                   ))}
                 </div>
-                {submitRating.isPending && <p className="mt-2 text-sm text-muted-foreground">Enviando...</p>}
+                <Textarea
+                  placeholder="Deixe uma mensagem (opcional)"
+                  value={feedbackMessage}
+                  onChange={(e) => setFeedbackMessage(e.target.value)}
+                  maxLength={300}
+                  className="mb-3 min-h-[70px] resize-none text-sm"
+                  disabled={submitRating.isPending}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full border-[#d1b122]/40 text-foreground hover:bg-[#d1b122]/10"
+                  disabled={submitRating.isPending || (feedbackStars === 0 && !feedbackMessage.trim())}
+                  onClick={() => submitRating.mutate({ stars: feedbackStars || 5, mensagem: feedbackMessage })}
+                >
+                  {submitRating.isPending ? <><Loader2 className="h-4 w-4 animate-spin" /> Enviando...</> : "Enviar Avaliação"}
+                </Button>
+                <p className="mt-2 text-[11px] text-muted-foreground/70">Você não precisa preencher para sair desta tela.</p>
               </div>
             ) : (
-              <div className="mb-6 rounded-lg border border-[#d1b122]/30 bg-[#d1b122]/5 p-4 text-center">
+              <div className="mb-6 rounded-2xl border border-[#d1b122]/30 bg-[#d1b122]/5 p-4 text-center">
                 <p className="text-[#d1b122] font-medium">Avaliação recebida! Muito obrigado. ⭐</p>
               </div>
             )}
