@@ -845,8 +845,11 @@ export default function Agendar() {
                 <label className="mb-1 block text-sm font-medium text-foreground">Nome</label>
                 <Input
                   value={clientName}
-                  onChange={(e) => setClientName(e.target.value)}
+                  onChange={(e) => setClientName(sanitizeName(e.target.value))}
+                  onBlur={(e) => setClientName(sanitizeName(e.target.value).trim())}
                   placeholder="Seu nome"
+                  autoComplete="name"
+                  inputMode="text"
                   className="border-border bg-secondary text-foreground"
                 />
               </div>
@@ -854,8 +857,19 @@ export default function Agendar() {
                 <label className="mb-1 block text-sm font-medium text-foreground">Telefone</label>
                 <Input
                   value={clientPhone}
-                  onChange={(e) => setClientPhone(e.target.value)}
+                  onChange={(e) => setClientPhone(formatBrPhone(e.target.value))}
+                  onKeyDown={(e) => {
+                    // Block alphabetic input with a small toast hint
+                    if (/^[A-Za-zÀ-ÖØ-öø-ÿ]$/.test(e.key)) {
+                      e.preventDefault();
+                      toast.error("Apenas números são permitidos no telefone.");
+                    }
+                  }}
                   placeholder="(71) 99999-9999"
+                  type="tel"
+                  inputMode="numeric"
+                  autoComplete="tel"
+                  maxLength={15}
                   className="border-border bg-secondary text-foreground"
                 />
               </div>
