@@ -449,8 +449,8 @@ export default function Agendar() {
         }
 
         const appointmentPayload: TablesInsert<"appointments"> = {
-          client_name: clientName.trim(),
-          client_phone: clientPhone.trim(),
+          client_name: sanitizeName(clientName).trim(),
+          client_phone: phoneDigits(clientPhone),
           service_id: firstServiceId,
           appointment_date: dateStr,
           appointment_time: selectedTime,
