@@ -79,6 +79,7 @@ export type Database = {
           estrelas: number
           hidden: boolean
           id: string
+          mensagem: string | null
           nome_cliente: string
         }
         Insert: {
@@ -86,6 +87,7 @@ export type Database = {
           estrelas: number
           hidden?: boolean
           id?: string
+          mensagem?: string | null
           nome_cliente: string
         }
         Update: {
@@ -93,6 +95,7 @@ export type Database = {
           estrelas?: number
           hidden?: boolean
           id?: string
+          mensagem?: string | null
           nome_cliente?: string
         }
         Relationships: []
