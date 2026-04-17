@@ -396,7 +396,12 @@ export default function Agendar() {
       const isValidDate = selectedDate instanceof Date && !Number.isNaN(selectedDate.getTime());
 
       if (!clientName?.trim()) throw new BookingUserFacingError("Informe seu nome.");
-      if (!clientPhone?.trim()) throw new BookingUserFacingError("Informe seu telefone.");
+      if (!hasLetter(clientName)) throw new BookingUserFacingError("O nome deve conter letras (não apenas números).");
+      const phoneOnlyDigits = phoneDigits(clientPhone);
+      if (!phoneOnlyDigits) throw new BookingUserFacingError("Informe seu telefone.");
+      if (phoneOnlyDigits.length < 10 || phoneOnlyDigits.length > 11) {
+        throw new BookingUserFacingError("Telefone inválido. Use o formato (XX) XXXXX-XXXX.");
+      }
       if (!isValidDate) throw new BookingUserFacingError("Selecione uma data válida.");
       if (!selectedTime?.trim()) throw new BookingUserFacingError("Selecione um horário.");
       if (!selectedServices?.length) throw new BookingUserFacingError("Selecione ao menos um serviço.");
