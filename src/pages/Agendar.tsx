@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Checkbox } from "@/components/ui/checkbox";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
@@ -481,15 +482,17 @@ export default function Agendar() {
     },
     onSuccess: (data) => {
       if (!data?.id) {
+        console.warn("[booking] onSuccess sem id, abortando transição.");
         toast.error("Erro ao confirmar agendamento. Tente novamente.");
         return;
       }
+      console.info("[booking] Agendamento criado com sucesso:", { id: data.id, date: data.appointment_date, time: data.appointment_time });
       setStep("confirmed");
       toast.success("Agendamento realizado com sucesso!");
       // WhatsApp NÃO é aberto automaticamente — evita bloqueio de pop-up e travamentos.
-      // O cliente pode clicar no botão visível na tela de confirmação se quiser notificar.
     },
     onError: (error: unknown) => {
+      console.error("[booking] Falha ao criar agendamento:", error);
       const message = error instanceof Error ? error.message : GENERIC_BOOKING_ERROR;
       toast.error(message || GENERIC_BOOKING_ERROR);
     },
@@ -497,16 +500,27 @@ export default function Agendar() {
 
   const isSubmittingBooking = isSubmittingCheckout || createAppointment.isPending;
 
+  const [feedbackStars, setFeedbackStars] = useState<number>(0);
+  const [feedbackMessage, setFeedbackMessage] = useState<string>("");
+
   const submitRating = useMutation({
-    mutationFn: async (stars: number) => {
-      const { error } = await supabase.from("avaliacoes").insert([{ nome_cliente: clientName, estrelas: stars }]);
+    mutationFn: async (payload: { stars: number; mensagem?: string }) => {
+      const row: Record<string, unknown> = {
+        nome_cliente: sanitizeName(clientName).trim() || "Cliente",
+        estrelas: payload.stars,
+      };
+      const trimmedMsg = payload.mensagem?.trim();
+      if (trimmedMsg) row.mensagem = trimmedMsg;
+      const { error } = await supabase.from("avaliacoes").insert([row as never]);
       if (error) throw error;
     },
     onSuccess: () => {
+      console.info("[rating] Avaliação enviada.");
       setSubmittedRating(true);
-      toast.success("Obrigado por avaliar o Fal!");
+      toast.success("Obrigado por avaliar! 🙏");
     },
-    onError: () => {
+    onError: (error) => {
+      console.error("[rating] Falha ao enviar avaliação:", error);
       toast.error("Houve um erro ao enviar sua avaliação.");
     },
   });
@@ -953,22 +967,25 @@ export default function Agendar() {
             </a>
 
             {!submittedRating ? (
-              <div className="mb-6 rounded-lg border border-border bg-card p-5 text-center transition-all">
-                <h3 className="mb-3 text-lg font-bold text-foreground">Avalie sua Experiência</h3>
-                <div className="flex justify-center gap-2">
+              <div className="mb-6 rounded-2xl border border-[#d1b122]/20 bg-gradient-to-b from-card to-card/60 p-5 text-center shadow-sm transition-all">
+                <h3 className="mb-1 text-base font-semibold text-foreground">Sua avaliação é muito importante para mim! 🚀</h3>
+                <p className="mb-4 text-xs text-muted-foreground">Avalie com estrelas (totalmente opcional)</p>
+                <div className="mb-4 flex justify-center gap-1.5">
                   {[1, 2, 3, 4, 5].map((star) => (
                     <button
                       key={star}
+                      type="button"
                       disabled={submitRating.isPending}
                       onMouseEnter={() => setHoveredRating(star)}
                       onMouseLeave={() => setHoveredRating(0)}
-                      onClick={() => submitRating.mutate(star)}
-                      className="transition-transform hover:scale-110 focus:outline-none"
+                      onClick={() => setFeedbackStars(star)}
+                      className="transition-transform hover:scale-110 focus:outline-none disabled:opacity-50"
+                      aria-label={`${star} estrela${star > 1 ? "s" : ""}`}
                     >
                       <Star
                         className={cn(
-                          "h-10 w-10 transition-colors",
-                          hoveredRating >= star
+                          "h-9 w-9 transition-colors",
+                          (hoveredRating || feedbackStars) >= star
                             ? "fill-yellow-500 text-yellow-500"
                             : "text-muted-foreground/30"
                         )}
@@ -976,10 +993,27 @@ export default function Agendar() {
                     </button>
                   ))}
                 </div>
-                {submitRating.isPending && <p className="mt-2 text-sm text-muted-foreground">Enviando...</p>}
+                <Textarea
+                  placeholder="Deixe uma mensagem (opcional)"
+                  value={feedbackMessage}
+                  onChange={(e) => setFeedbackMessage(e.target.value)}
+                  maxLength={300}
+                  className="mb-3 min-h-[70px] resize-none text-sm"
+                  disabled={submitRating.isPending}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full border-[#d1b122]/40 text-foreground hover:bg-[#d1b122]/10"
+                  disabled={submitRating.isPending || (feedbackStars === 0 && !feedbackMessage.trim())}
+                  onClick={() => submitRating.mutate({ stars: feedbackStars || 5, mensagem: feedbackMessage })}
+                >
+                  {submitRating.isPending ? <><Loader2 className="h-4 w-4 animate-spin" /> Enviando...</> : "Enviar Avaliação"}
+                </Button>
+                <p className="mt-2 text-[11px] text-muted-foreground/70">Você não precisa preencher para sair desta tela.</p>
               </div>
             ) : (
-              <div className="mb-6 rounded-lg border border-[#d1b122]/30 bg-[#d1b122]/5 p-4 text-center">
+              <div className="mb-6 rounded-2xl border border-[#d1b122]/30 bg-[#d1b122]/5 p-4 text-center">
                 <p className="text-[#d1b122] font-medium">Avaliação recebida! Muito obrigado. ⭐</p>
               </div>
             )}
