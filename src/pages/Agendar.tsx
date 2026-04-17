@@ -47,6 +47,24 @@ class BookingUserFacingError extends Error {
 
 const GENERIC_BOOKING_ERROR = "Não foi possível concluir o agendamento. Verifique sua conexão e tente novamente.";
 
+// Allow only letters (incl. accented) and spaces in client name
+const sanitizeName = (raw: string) =>
+  raw.replace(/[^A-Za-zÀ-ÖØ-öø-ÿ\s'-]/g, "").replace(/\s{2,}/g, " ");
+
+const hasLetter = (s: string) => /[A-Za-zÀ-ÖØ-öø-ÿ]/.test(s);
+
+// Brazilian phone mask: (XX) XXXXX-XXXX (mobile) or (XX) XXXX-XXXX (landline)
+const formatBrPhone = (raw: string) => {
+  const digits = raw.replace(/\D/g, "").slice(0, 11);
+  if (digits.length === 0) return "";
+  if (digits.length <= 2) return `(${digits}`;
+  if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+  if (digits.length <= 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+};
+
+const phoneDigits = (s: string) => s.replace(/\D/g, "");
+
 export default function Agendar() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -378,7 +396,12 @@ export default function Agendar() {
       const isValidDate = selectedDate instanceof Date && !Number.isNaN(selectedDate.getTime());
 
       if (!clientName?.trim()) throw new BookingUserFacingError("Informe seu nome.");
-      if (!clientPhone?.trim()) throw new BookingUserFacingError("Informe seu telefone.");
+      if (!hasLetter(clientName)) throw new BookingUserFacingError("O nome deve conter letras (não apenas números).");
+      const phoneOnlyDigits = phoneDigits(clientPhone);
+      if (!phoneOnlyDigits) throw new BookingUserFacingError("Informe seu telefone.");
+      if (phoneOnlyDigits.length < 10 || phoneOnlyDigits.length > 11) {
+        throw new BookingUserFacingError("Telefone inválido. Use o formato (XX) XXXXX-XXXX.");
+      }
       if (!isValidDate) throw new BookingUserFacingError("Selecione uma data válida.");
       if (!selectedTime?.trim()) throw new BookingUserFacingError("Selecione um horário.");
       if (!selectedServices?.length) throw new BookingUserFacingError("Selecione ao menos um serviço.");
@@ -426,8 +449,8 @@ export default function Agendar() {
         }
 
         const appointmentPayload: TablesInsert<"appointments"> = {
-          client_name: clientName.trim(),
-          client_phone: clientPhone.trim(),
+          client_name: sanitizeName(clientName).trim(),
+          client_phone: phoneDigits(clientPhone),
           service_id: firstServiceId,
           appointment_date: dateStr,
           appointment_time: selectedTime,
@@ -501,7 +524,10 @@ export default function Agendar() {
       case "service": return selectedServiceIds.size > 0;
       case "date": return !!selectedDate;
       case "time": return !!selectedTime;
-      case "info": return clientName.trim().length > 0 && clientPhone.trim().length > 0;
+      case "info": {
+        const phoneOk = phoneDigits(clientPhone).length >= 10;
+        return clientName.trim().length > 0 && hasLetter(clientName) && phoneOk;
+      }
       case "payment": return !!paymentMethod;
       case "confirm":
         return Boolean(
@@ -827,8 +853,11 @@ export default function Agendar() {
                 <label className="mb-1 block text-sm font-medium text-foreground">Nome</label>
                 <Input
                   value={clientName}
-                  onChange={(e) => setClientName(e.target.value)}
+                  onChange={(e) => setClientName(sanitizeName(e.target.value))}
+                  onBlur={(e) => setClientName(sanitizeName(e.target.value).trim())}
                   placeholder="Seu nome"
+                  autoComplete="name"
+                  inputMode="text"
                   className="border-border bg-secondary text-foreground"
                 />
               </div>
@@ -836,8 +865,19 @@ export default function Agendar() {
                 <label className="mb-1 block text-sm font-medium text-foreground">Telefone</label>
                 <Input
                   value={clientPhone}
-                  onChange={(e) => setClientPhone(e.target.value)}
+                  onChange={(e) => setClientPhone(formatBrPhone(e.target.value))}
+                  onKeyDown={(e) => {
+                    // Block alphabetic input with a small toast hint
+                    if (/^[A-Za-zÀ-ÖØ-öø-ÿ]$/.test(e.key)) {
+                      e.preventDefault();
+                      toast.error("Apenas números são permitidos no telefone.");
+                    }
+                  }}
                   placeholder="(71) 99999-9999"
+                  type="tel"
+                  inputMode="numeric"
+                  autoComplete="tel"
+                  maxLength={15}
                   className="border-border bg-secondary text-foreground"
                 />
               </div>
