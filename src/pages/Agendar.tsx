@@ -524,7 +524,10 @@ export default function Agendar() {
       case "service": return selectedServiceIds.size > 0;
       case "date": return !!selectedDate;
       case "time": return !!selectedTime;
-      case "info": return clientName.trim().length > 0 && clientPhone.trim().length > 0;
+      case "info": {
+        const phoneOk = phoneDigits(clientPhone).length >= 10;
+        return clientName.trim().length > 0 && hasLetter(clientName) && phoneOk;
+      }
       case "payment": return !!paymentMethod;
       case "confirm":
         return Boolean(
