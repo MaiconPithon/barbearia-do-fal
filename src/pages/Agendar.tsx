@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import confetti from "canvas-confetti";
 import { supabase } from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -517,7 +518,18 @@ export default function Agendar() {
     onSuccess: () => {
       console.info("[rating] Avaliação enviada.");
       setSubmittedRating(true);
-      toast.success("Obrigado por avaliar! 🙏");
+      // Light confetti burst as visual confirmation
+      try {
+        confetti({
+          particleCount: 80,
+          spread: 70,
+          origin: { y: 0.6 },
+          colors: ["#d1b122", "#f5d76e", "#ffffff", "#22c55e"],
+          disableForReducedMotion: true,
+        });
+      } catch (e) {
+        console.warn("[rating] Confetti failed:", e);
+      }
     },
     onError: (error) => {
       console.error("[rating] Falha ao enviar avaliação:", error);
@@ -1013,8 +1025,18 @@ export default function Agendar() {
                 <p className="mt-2 text-[11px] text-muted-foreground/70">Você não precisa preencher para sair desta tela.</p>
               </div>
             ) : (
-              <div className="mb-6 rounded-2xl border border-[#d1b122]/30 bg-[#d1b122]/5 p-4 text-center">
-                <p className="text-[#d1b122] font-medium">Avaliação recebida! Muito obrigado. ⭐</p>
+              <div className="mb-6 rounded-2xl border border-green-500/30 bg-green-500/5 p-6 text-center animate-in fade-in zoom-in-95 duration-500">
+                <div className="mb-3 flex justify-center">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-500/15">
+                    <Check className="h-7 w-7 text-green-500" strokeWidth={3} />
+                  </div>
+                </div>
+                <p className="text-base font-semibold text-foreground">
+                  Obrigado, {sanitizeName(clientName).trim().split(" ")[0] || "Cliente"}!
+                </p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Sua avaliação é muito importante para o meu crescimento como desenvolvedor. 🚀🔥
+                </p>
               </div>
             )}
 
