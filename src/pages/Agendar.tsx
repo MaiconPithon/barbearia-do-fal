@@ -481,15 +481,17 @@ export default function Agendar() {
     },
     onSuccess: (data) => {
       if (!data?.id) {
+        console.warn("[booking] onSuccess sem id, abortando transição.");
         toast.error("Erro ao confirmar agendamento. Tente novamente.");
         return;
       }
+      console.info("[booking] Agendamento criado com sucesso:", { id: data.id, date: data.appointment_date, time: data.appointment_time });
       setStep("confirmed");
       toast.success("Agendamento realizado com sucesso!");
       // WhatsApp NÃO é aberto automaticamente — evita bloqueio de pop-up e travamentos.
-      // O cliente pode clicar no botão visível na tela de confirmação se quiser notificar.
     },
     onError: (error: unknown) => {
+      console.error("[booking] Falha ao criar agendamento:", error);
       const message = error instanceof Error ? error.message : GENERIC_BOOKING_ERROR;
       toast.error(message || GENERIC_BOOKING_ERROR);
     },
@@ -497,16 +499,27 @@ export default function Agendar() {
 
   const isSubmittingBooking = isSubmittingCheckout || createAppointment.isPending;
 
+  const [feedbackStars, setFeedbackStars] = useState<number>(0);
+  const [feedbackMessage, setFeedbackMessage] = useState<string>("");
+
   const submitRating = useMutation({
-    mutationFn: async (stars: number) => {
-      const { error } = await supabase.from("avaliacoes").insert([{ nome_cliente: clientName, estrelas: stars }]);
+    mutationFn: async (payload: { stars: number; mensagem?: string }) => {
+      const row: Record<string, unknown> = {
+        nome_cliente: sanitizeName(clientName).trim() || "Cliente",
+        estrelas: payload.stars,
+      };
+      const trimmedMsg = payload.mensagem?.trim();
+      if (trimmedMsg) row.mensagem = trimmedMsg;
+      const { error } = await supabase.from("avaliacoes").insert([row as never]);
       if (error) throw error;
     },
     onSuccess: () => {
+      console.info("[rating] Avaliação enviada.");
       setSubmittedRating(true);
-      toast.success("Obrigado por avaliar o Fal!");
+      toast.success("Obrigado por avaliar! 🙏");
     },
-    onError: () => {
+    onError: (error) => {
+      console.error("[rating] Falha ao enviar avaliação:", error);
       toast.error("Houve um erro ao enviar sua avaliação.");
     },
   });
