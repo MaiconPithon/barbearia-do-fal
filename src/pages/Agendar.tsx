@@ -47,6 +47,24 @@ class BookingUserFacingError extends Error {
 
 const GENERIC_BOOKING_ERROR = "Não foi possível concluir o agendamento. Verifique sua conexão e tente novamente.";
 
+// Allow only letters (incl. accented) and spaces in client name
+const sanitizeName = (raw: string) =>
+  raw.replace(/[^A-Za-zÀ-ÖØ-öø-ÿ\s'-]/g, "").replace(/\s{2,}/g, " ");
+
+const hasLetter = (s: string) => /[A-Za-zÀ-ÖØ-öø-ÿ]/.test(s);
+
+// Brazilian phone mask: (XX) XXXXX-XXXX (mobile) or (XX) XXXX-XXXX (landline)
+const formatBrPhone = (raw: string) => {
+  const digits = raw.replace(/\D/g, "").slice(0, 11);
+  if (digits.length === 0) return "";
+  if (digits.length <= 2) return `(${digits}`;
+  if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+  if (digits.length <= 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+};
+
+const phoneDigits = (s: string) => s.replace(/\D/g, "");
+
 export default function Agendar() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
