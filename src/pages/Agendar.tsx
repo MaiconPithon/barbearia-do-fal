@@ -602,9 +602,28 @@ export default function Agendar() {
     ? getSlotStatus(toMin(selectedTime), totalServiceSpan || 30).warning
     : undefined;
 
+  // Unified loading gate: wait for essential data before rendering the booking UI.
+  // This prevents map/filter crashes from undefined arrays and avoids partial UI flashes.
+  const isInitialLoading = !services || !scheduleConfig;
+
+  if (isInitialLoading) {
+    return (
+      <main
+        className="flex min-h-screen items-center justify-center bg-background px-4"
+        translate="no"
+      >
+        <div className="flex flex-col items-center gap-3 text-muted-foreground">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-sm">Carregando agenda...</p>
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main
       className="relative min-h-screen"
+      translate="no"
       style={{
         backgroundImage: `linear-gradient(rgba(10,10,10,0.82), rgba(10,10,10,0.82)), url("${appearance?.background_image || '/images/site-bg.png'}")`,
         backgroundSize: 'cover',
@@ -612,6 +631,7 @@ export default function Agendar() {
         backgroundAttachment: 'fixed',
       }}
     >
+
       {/* Header */}
       <div className="flex items-center gap-3 px-4 py-4">
         <button onClick={goBack} className="text-foreground hover:text-primary transition-colors">
