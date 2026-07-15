@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
-import { Scissors, Clock, MapPin, Phone, Star, ChevronDown, ChevronUp, X, AlertTriangle } from "lucide-react";
+import { Scissors, Clock, MapPin, Phone, Star, ChevronDown, ChevronUp, X, AlertTriangle, CalendarClock } from "lucide-react";
+import { RescheduleModal } from "@/components/RescheduleModal";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabaseClient";
 import { useNavigate } from "react-router-dom";
@@ -24,6 +25,7 @@ const Index = () => {
   const [phoneInput, setPhoneInput] = useState("");
   const [searchPhone, setSearchPhone] = useState("");
   const [cancelThreshold, setCancelThreshold] = useState(60); // minutes, from business_settings
+  const [rescheduleAppt, setRescheduleAppt] = useState<any>(null);
 
   // Load cancellation threshold
   useEffect(() => {
@@ -63,7 +65,7 @@ const Index = () => {
       const digits = searchPhone.replace(/\D/g, "");
       const { data, error } = await supabase
         .from("appointments")
-        .select("id, client_name, appointment_date, appointment_time, service_description, services(name), price, status")
+        .select("id, client_name, appointment_date, appointment_time, service_description, service_id, total_duration, services(name), price, status")
         .or(`client_phone.ilike.%${digits}%,client_phone.ilike.%${searchPhone}%`)
         .order("appointment_date", { ascending: false })
         .order("appointment_time", { ascending: true })
@@ -319,17 +321,27 @@ const Index = () => {
                             </span>
 
                             {cancelStatus === "cancel" && (
-                              <button
-                                onClick={() => {
-                                  if (confirm("Confirmar cancelamento deste agendamento?")) {
-                                    cancelMutation.mutate(a.id);
-                                  }
-                                }}
-                                disabled={cancelMutation.isPending}
-                                className="rounded-md border border-red-500/40 bg-red-500/10 px-2.5 py-1 text-[11px] font-semibold text-red-400 hover:bg-red-500/20 transition-colors disabled:opacity-50"
-                              >
-                                {cancelMutation.isPending ? "Cancelando..." : "Cancelar"}
-                              </button>
+                              <div className="flex gap-1.5">
+                                {a.status === "pendente" && (
+                                  <button
+                                    onClick={() => setRescheduleAppt(a)}
+                                    className="rounded-md border border-primary/40 bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary hover:bg-primary/20 transition-colors"
+                                  >
+                                    Reagendar
+                                  </button>
+                                )}
+                                <button
+                                  onClick={() => {
+                                    if (confirm("Confirmar cancelamento deste agendamento?")) {
+                                      cancelMutation.mutate(a.id);
+                                    }
+                                  }}
+                                  disabled={cancelMutation.isPending}
+                                  className="rounded-md border border-red-500/40 bg-red-500/10 px-2.5 py-1 text-[11px] font-semibold text-red-400 hover:bg-red-500/20 transition-colors disabled:opacity-50"
+                                >
+                                  {cancelMutation.isPending ? "Cancelando..." : "Cancelar"}
+                                </button>
+                              </div>
                             )}
 
                             {cancelStatus === "blocked" && (
@@ -372,6 +384,14 @@ const Index = () => {
       )}
 
       <WhatsAppButton />
+
+      <RescheduleModal
+        open={!!rescheduleAppt}
+        onClose={() => setRescheduleAppt(null)}
+        appointment={rescheduleAppt}
+        phone={searchPhone}
+      />
+
     </main>
   );
 };
