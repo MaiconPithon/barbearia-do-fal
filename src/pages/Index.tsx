@@ -384,6 +384,14 @@ const Index = () => {
       )}
 
       <WhatsAppButton />
+
+      <RescheduleModal
+        open={!!rescheduleAppt}
+        onClose={() => setRescheduleAppt(null)}
+        appointment={rescheduleAppt}
+        phone={searchPhone}
+      />
+
     </main>
   );
 };
