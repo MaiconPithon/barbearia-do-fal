@@ -57,7 +57,7 @@ const Index = () => {
   });
 
   // Query appointments by phone
-  const { data: myAppointments, isLoading: loadingAppts } = useQuery({
+  const { data: myAppointments, isLoading: loadingAppts, refetch: refetchMyAppointments } = useQuery({
     queryKey: ["my-appointments", searchPhone],
     enabled: searchPhone.length >= 8,
     queryFn: async () => {
