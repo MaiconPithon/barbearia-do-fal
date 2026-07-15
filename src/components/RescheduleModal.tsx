@@ -164,7 +164,10 @@ export function RescheduleModal({ open, onClose, appointment, phone, onReschedul
     return false;
   };
 
-  // Compute available slots for selected date
+  // Compute available slots for selected date — MIRRORS logic in src/pages/Agendar.tsx
+  // Step = service duration (or admin slotInterval, whichever larger), PLUS extra anchor
+  // times: end of each existing booking and end of the break, so consecutive bookings
+  // don't leave phantom gaps (e.g. 40min service → 14:30, 15:10, 15:50).
   const slots = useMemo(() => {
     if (!selectedDate || !scheduleConfig) return [];
     const dow = getDay(selectedDate);
@@ -218,26 +221,48 @@ export function RescheduleModal({ open, onClose, appointment, phone, onReschedul
       ? new Date().getHours() * 60 + new Date().getMinutes()
       : -1;
 
-    const result: { time: string; available: boolean }[] = [];
-    const step = Math.max(duration, slotInterval, 15);
+    // Step = service duration (fallback slotInterval). Do NOT clamp to slotInterval —
+    // that was the bug producing wrong intervals (e.g. 45min steps for a 40min service).
+    const slotStep = Math.max(duration || slotInterval || 30, 1);
+    const slotTimes = new Set<number>();
 
-    for (let m = openMin; m + duration <= closeMin; m += step) {
-      const slotEnd = m + duration;
-      let ok = true;
-
-      if (m < nowMin) ok = false;
-      if (blockedTimes.has(toTime(m))) ok = false;
-
-      if (breakStart !== null && breakEnd !== null) {
-        if (m < breakEnd && slotEnd > breakStart) ok = false;
-      }
-
-      for (const b of booked) {
-        if (m < b.end && slotEnd > b.start) { ok = false; break; }
-      }
-
-      result.push({ time: toTime(m), available: ok });
+    // 1) Base slots stepped by service duration
+    for (let m = openMin; m < closeMin; m += slotStep) {
+      slotTimes.add(m);
     }
+    // 2) Anchor to end of each existing booking (tight back-to-back)
+    booked.forEach((b) => {
+      if (b.end >= openMin && b.end < closeMin) slotTimes.add(b.end);
+    });
+    // 3) Anchor to end of break (first slot right after pause)
+    if (breakStart !== null && breakEnd !== null && breakEnd >= openMin && breakEnd < closeMin) {
+      slotTimes.add(breakEnd);
+    }
+
+    const result: { time: string; available: boolean }[] = [];
+    Array.from(slotTimes)
+      .sort((a, b) => a - b)
+      .forEach((m) => {
+        const slotEnd = m + duration;
+        let ok = true;
+
+        if (slotEnd > closeMin) ok = false;
+        if (m < openMin) ok = false;
+        if (m < nowMin) ok = false;
+        if (blockedTimes.has(toTime(m))) ok = false;
+
+        if (breakStart !== null && breakEnd !== null) {
+          // Inside break, or overlapping break
+          if (m >= breakStart && m < breakEnd) ok = false;
+          else if (m < breakEnd && slotEnd > breakStart) ok = false;
+        }
+
+        for (const b of booked) {
+          if (m < b.end && slotEnd > b.start) { ok = false; break; }
+        }
+
+        result.push({ time: toTime(m), available: ok });
+      });
     return result;
   }, [selectedDate, scheduleConfig, scheduleOverrides, appointmentsOnDate, blockedOnDate, duration, slotInterval, appointment?.id]);
 
@@ -262,8 +287,13 @@ export function RescheduleModal({ open, onClose, appointment, phone, onReschedul
       throw new Error(messages[status] || "Não foi possível reagendar.");
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["my-appointments"] });
-      await queryClient.invalidateQueries({ queryKey: ["appointments"] });
+      // Invalidate + force active refetch so "Meus Agendamentos" updates instantly (no F5).
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["my-appointments"] }),
+        queryClient.invalidateQueries({ queryKey: ["appointments"] }),
+        queryClient.refetchQueries({ queryKey: ["my-appointments"], type: "active" }),
+        queryClient.refetchQueries({ queryKey: ["appointments"], type: "active" }),
+      ]);
       toast.success("Horário reagendado com sucesso!");
       onRescheduled?.();
       onClose();
