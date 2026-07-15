@@ -281,6 +281,15 @@ export type Database = {
         }
         Returns: boolean
       }
+      reschedule_appointment_by_phone: {
+        Args: {
+          _appointment_id: string
+          _new_date: string
+          _new_time: string
+          _phone: string
+        }
+        Returns: string
+      }
     }
     Enums: {
       app_role: "admin" | "user" | "super_admin"
