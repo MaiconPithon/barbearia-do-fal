@@ -932,7 +932,7 @@ export default function Agendar() {
                       toast.error("Apenas números são permitidos no telefone.");
                     }
                   }}
-                  placeholder="(71) 99999-9999"
+                  placeholder="(71) 98888-8888"
                   type="tel"
                   inputMode="numeric"
                   autoComplete="tel"
