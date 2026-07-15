@@ -67,6 +67,21 @@ const formatBrPhone = (raw: string) => {
 
 const phoneDigits = (s: string) => s.replace(/\D/g, "");
 
+// Strict Brazilian mobile validation:
+// - 11 digits, DDD != "00", 3rd digit === '9', 4th digit ∈ {'8','9'},
+//   last 8 digits not all identical (blocks 00000000000 / 71988888888 etc.)
+const validarTelefone = (telefone: string): boolean => {
+  const d = (telefone || "").replace(/\D/g, "");
+  if (!d) return false;
+  if (d.length !== 11) return false;
+  if (d.slice(0, 2) === "00") return false;
+  if (d[2] !== "9") return false;
+  if (d[3] !== "8" && d[3] !== "9") return false;
+  const last8 = d.slice(3);
+  if (/^(\d)\1{7}$/.test(last8)) return false;
+  return true;
+};
+
 export default function Agendar() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
