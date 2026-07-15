@@ -564,7 +564,7 @@ export default function Agendar() {
       case "date": return !!selectedDate;
       case "time": return !!selectedTime;
       case "info": {
-        const phoneOk = phoneDigits(clientPhone).length >= 10;
+        const phoneOk = validarTelefone(clientPhone);
         return clientName.trim().length > 0 && hasLetter(clientName) && phoneOk;
       }
       case "payment": return !!paymentMethod;
