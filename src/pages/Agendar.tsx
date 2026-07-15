@@ -67,6 +67,21 @@ const formatBrPhone = (raw: string) => {
 
 const phoneDigits = (s: string) => s.replace(/\D/g, "");
 
+// Strict Brazilian mobile validation:
+// - 11 digits, DDD != "00", 3rd digit === '9', 4th digit ∈ {'8','9'},
+//   last 8 digits not all identical (blocks 00000000000 / 71988888888 etc.)
+const validarTelefone = (telefone: string): boolean => {
+  const d = (telefone || "").replace(/\D/g, "");
+  if (!d) return false;
+  if (d.length !== 11) return false;
+  if (d.slice(0, 2) === "00") return false;
+  if (d[2] !== "9") return false;
+  if (d[3] !== "8" && d[3] !== "9") return false;
+  const last8 = d.slice(3);
+  if (/^(\d)\1{7}$/.test(last8)) return false;
+  return true;
+};
+
 export default function Agendar() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -399,10 +414,8 @@ export default function Agendar() {
 
       if (!clientName?.trim()) throw new BookingUserFacingError("Informe seu nome.");
       if (!hasLetter(clientName)) throw new BookingUserFacingError("O nome deve conter letras (não apenas números).");
-      const phoneOnlyDigits = phoneDigits(clientPhone);
-      if (!phoneOnlyDigits) throw new BookingUserFacingError("Informe seu telefone.");
-      if (phoneOnlyDigits.length < 10 || phoneOnlyDigits.length > 11) {
-        throw new BookingUserFacingError("Telefone inválido. Use o formato (XX) XXXXX-XXXX.");
+      if (!validarTelefone(clientPhone)) {
+        throw new BookingUserFacingError("Por favor, insira um celular válido (Ex: 71 98888-8888).");
       }
       if (!isValidDate) throw new BookingUserFacingError("Selecione uma data válida.");
       if (!selectedTime?.trim()) throw new BookingUserFacingError("Selecione um horário.");
@@ -551,7 +564,7 @@ export default function Agendar() {
       case "date": return !!selectedDate;
       case "time": return !!selectedTime;
       case "info": {
-        const phoneOk = phoneDigits(clientPhone).length >= 10;
+        const phoneOk = validarTelefone(clientPhone);
         return clientName.trim().length > 0 && hasLetter(clientName) && phoneOk;
       }
       case "payment": return !!paymentMethod;
@@ -919,7 +932,7 @@ export default function Agendar() {
                       toast.error("Apenas números são permitidos no telefone.");
                     }
                   }}
-                  placeholder="(71) 99999-9999"
+                  placeholder="(71) 98888-8888"
                   type="tel"
                   inputMode="numeric"
                   autoComplete="tel"
