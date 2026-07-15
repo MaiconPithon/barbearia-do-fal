@@ -390,6 +390,7 @@ const Index = () => {
         onClose={() => setRescheduleAppt(null)}
         appointment={rescheduleAppt}
         phone={searchPhone}
+        onRescheduled={() => { refetchMyAppointments(); }}
       />
 
     </main>
