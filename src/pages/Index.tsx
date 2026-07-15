@@ -92,6 +92,8 @@ const Index = () => {
         queryClient.refetchQueries({ queryKey: ["my-appointments", searchPhone], type: "active" }),
         queryClient.refetchQueries({ queryKey: ["appointments"], type: "active" }),
       ]);
+      // Explicit refetch as final guarantee that the list updates without F5.
+      refetchMyAppointments();
       toast.success("Horário liberado com sucesso!");
     },
     onError: (err: any) => toast.error(err?.message || "Não foi possível cancelar. Tente novamente."),
