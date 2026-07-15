@@ -25,6 +25,7 @@ const Index = () => {
   const [phoneInput, setPhoneInput] = useState("");
   const [searchPhone, setSearchPhone] = useState("");
   const [cancelThreshold, setCancelThreshold] = useState(60); // minutes, from business_settings
+  const [rescheduleAppt, setRescheduleAppt] = useState<any>(null);
 
   // Load cancellation threshold
   useEffect(() => {
