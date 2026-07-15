@@ -321,17 +321,27 @@ const Index = () => {
                             </span>
 
                             {cancelStatus === "cancel" && (
-                              <button
-                                onClick={() => {
-                                  if (confirm("Confirmar cancelamento deste agendamento?")) {
-                                    cancelMutation.mutate(a.id);
-                                  }
-                                }}
-                                disabled={cancelMutation.isPending}
-                                className="rounded-md border border-red-500/40 bg-red-500/10 px-2.5 py-1 text-[11px] font-semibold text-red-400 hover:bg-red-500/20 transition-colors disabled:opacity-50"
-                              >
-                                {cancelMutation.isPending ? "Cancelando..." : "Cancelar"}
-                              </button>
+                              <div className="flex gap-1.5">
+                                {a.status === "pendente" && (
+                                  <button
+                                    onClick={() => setRescheduleAppt(a)}
+                                    className="rounded-md border border-primary/40 bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary hover:bg-primary/20 transition-colors"
+                                  >
+                                    Reagendar
+                                  </button>
+                                )}
+                                <button
+                                  onClick={() => {
+                                    if (confirm("Confirmar cancelamento deste agendamento?")) {
+                                      cancelMutation.mutate(a.id);
+                                    }
+                                  }}
+                                  disabled={cancelMutation.isPending}
+                                  className="rounded-md border border-red-500/40 bg-red-500/10 px-2.5 py-1 text-[11px] font-semibold text-red-400 hover:bg-red-500/20 transition-colors disabled:opacity-50"
+                                >
+                                  {cancelMutation.isPending ? "Cancelando..." : "Cancelar"}
+                                </button>
+                              </div>
                             )}
 
                             {cancelStatus === "blocked" && (
