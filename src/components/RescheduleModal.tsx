@@ -287,8 +287,13 @@ export function RescheduleModal({ open, onClose, appointment, phone, onReschedul
       throw new Error(messages[status] || "Não foi possível reagendar.");
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["my-appointments"] });
-      await queryClient.invalidateQueries({ queryKey: ["appointments"] });
+      // Invalidate + force active refetch so "Meus Agendamentos" updates instantly (no F5).
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["my-appointments"] }),
+        queryClient.invalidateQueries({ queryKey: ["appointments"] }),
+        queryClient.refetchQueries({ queryKey: ["my-appointments"], type: "active" }),
+        queryClient.refetchQueries({ queryKey: ["appointments"], type: "active" }),
+      ]);
       toast.success("Horário reagendado com sucesso!");
       onRescheduled?.();
       onClose();
