@@ -65,7 +65,7 @@ const Index = () => {
       const digits = searchPhone.replace(/\D/g, "");
       const { data, error } = await supabase
         .from("appointments")
-        .select("id, client_name, appointment_date, appointment_time, service_description, services(name), price, status")
+        .select("id, client_name, appointment_date, appointment_time, service_description, service_id, total_duration, services(name), price, status")
         .or(`client_phone.ilike.%${digits}%,client_phone.ilike.%${searchPhone}%`)
         .order("appointment_date", { ascending: false })
         .order("appointment_time", { ascending: true })
