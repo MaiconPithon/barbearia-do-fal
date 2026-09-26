@@ -1027,7 +1027,7 @@ export default function Agendar() {
               </div>
               <Button asChild className="w-full shrink-0 bg-whatsapp text-foreground hover:bg-whatsapp/90 sm:w-auto">
                 <a
-                  href={`https://wa.me/5571999999999?text=${encodeURIComponent("Olá! Acabei de agendar meu horário e quero escolher um número da rifa!")}`}
+                  href="https://wa.me/5571988335001?text=Olá!%20Acabei%20de%20agendar%20meu%20horário%20e%20quero%20participar%20da%20rifa.%20Quais%20números%20estão%20disponíveis?"
                   target="_blank"
                   rel="noopener noreferrer"
                 >
