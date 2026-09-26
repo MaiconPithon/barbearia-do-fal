@@ -15,8 +15,9 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { format, getDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { LogOut, Calendar as CalendarIcon, DollarSign, UserPlus, Home, Settings, Clock, Ban, Trash2, KeyRound, X, Shield, MessageCircle, Pencil, Palette, Star, Zap, Plus, EyeOff, Eye } from "lucide-react";
+import { LogOut, Calendar as CalendarIcon, CalendarClock, DollarSign, UserPlus, Home, Settings, Clock, Ban, Trash2, KeyRound, X, Shield, MessageCircle, Pencil, Palette, Star, Zap, Plus, EyeOff, Eye } from "lucide-react";
 import { EditAppointmentModal } from "@/components/EditAppointmentModal";
+import { RescheduleModal } from "@/components/RescheduleModal";
 import { AppearanceTab } from "@/components/AppearanceTab";
 import { QuickSale } from "@/components/QuickSale";
 import { ImageUpload } from "@/components/ImageUpload";
@@ -51,6 +52,7 @@ export default function Admin() {
   const [filterDate, setFilterDate] = useState<Date | undefined>();
   const [showCancelled, setShowCancelled] = useState(false);
   const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null);
+  const [reschedulingAppointment, setReschedulingAppointment] = useState<Appointment | null>(null);
   const [editingPasswordId, setEditingPasswordId] = useState<string | null>(null);
   const [newUserPassword, setNewUserPassword] = useState("");
   const [businessNameInput, setBusinessNameInput] = useState("");
@@ -760,6 +762,17 @@ export default function Admin() {
                               </Select>
                             </TableCell>
                             <TableCell className="flex gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                disabled={a.status !== "pendente"}
+                                onClick={() => setReschedulingAppointment(a)}
+                                className="h-8 w-8 text-primary hover:text-primary/80"
+                                title={a.status === "pendente" ? "Reagendar" : "Apenas agendamentos pendentes podem ser reagendados"}
+                                aria-label={`Reagendar agendamento de ${a.client_name}`}
+                              >
+                                <CalendarClock className="h-4 w-4" />
+                              </Button>
                               <Button
                                 variant="ghost"
                                 size="icon"
@@ -1645,6 +1658,13 @@ export default function Admin() {
         open={!!editingAppointment}
         onOpenChange={(open) => { if (!open) setEditingAppointment(null); }}
         appointment={editingAppointment}
+      />
+      <RescheduleModal
+        open={!!reschedulingAppointment}
+        onClose={() => setReschedulingAppointment(null)}
+        appointment={reschedulingAppointment}
+        phone={reschedulingAppointment?.client_phone || ""}
+        onRescheduled={() => { queryClient.invalidateQueries({ queryKey: ["admin-appointments"] }); }}
       />
     </main>
   );
