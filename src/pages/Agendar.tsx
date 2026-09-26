@@ -15,6 +15,7 @@ import { format, getDay, isBefore, startOfDay, addDays, isAfter, isToday } from 
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { useAppearance } from "@/hooks/useAppearance";
+import rifaPremio from "@/assets/rifa-premio.jpeg.asset.json";
 import type { Enums, TablesInsert } from "@/integrations/supabase/types";
 
 type Step = "service" | "date" | "time" | "info" | "payment" | "confirm" | "confirmed";
@@ -1010,6 +1011,30 @@ export default function Agendar() {
                 Enviar confirmação via WhatsApp
               </Button>
             </a>
+
+            <div className="mb-6 flex flex-col items-center gap-4 rounded-lg border border-primary/40 bg-card p-5 text-center sm:flex-row sm:text-left">
+              <img
+                src={rifaPremio.url}
+                alt="Cartela da rifa de um ano de cortes"
+                className="h-36 w-24 shrink-0 rounded-md object-contain"
+                loading="lazy"
+              />
+              <div className="min-w-0 flex-1">
+                <h3 className="text-lg font-bold text-primary">💈 Concorra a 1 Ano de Cortes Grátis!</h3>
+                <p className="mt-2 text-sm text-foreground">
+                  Participe da nossa rifa: 1 ano de corte de cabelo (2 cortes/mês). Valor: 1 por R$ 30 ou 2 por R$ 50.
+                </p>
+              </div>
+              <Button asChild className="w-full shrink-0 bg-whatsapp text-foreground hover:bg-whatsapp/90 sm:w-auto">
+                <a
+                  href={`https://wa.me/5571999999999?text=${encodeURIComponent("Olá! Acabei de agendar meu horário e quero escolher um número da rifa!")}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Escolher meu número
+                </a>
+              </Button>
+            </div>
 
             {!submittedRating ? (
               <div className="mb-6 rounded-2xl border border-[#d1b122]/20 bg-gradient-to-b from-card to-card/60 p-5 text-center shadow-sm transition-all">
