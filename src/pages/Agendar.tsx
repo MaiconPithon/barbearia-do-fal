@@ -1027,7 +1027,7 @@ export default function Agendar() {
               </div>
               <Button asChild className="w-full shrink-0 bg-whatsapp text-foreground hover:bg-whatsapp/90 sm:w-auto">
                 <a
-                  href="https://wa.me/5571988335001?text=Olá!%20Acabei%20de%20agendar%20meu%20horário%20e%20quero%20participar%20da%20rifa.%20Quais%20números%20estão%20disponíveis?"
+                  href="https://wa.me/5571988335001?text=Ol%C3%A1%21%20%F0%9F%92%88%20Acabei%20de%20agendar%20meu%20hor%C3%A1rio%20e%20quero%20participar%20da%20rifa%21%20%F0%9F%8E%9F%EF%B8%8F%20Quais%20n%C3%BAmeros%20est%C3%A3o%20dispon%C3%ADveis%3F%20%F0%9F%91%80"
                   target="_blank"
                   rel="noopener noreferrer"
                 >
