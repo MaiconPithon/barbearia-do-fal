@@ -24,6 +24,7 @@ import { ImageUpload } from "@/components/ImageUpload";
 import { useAppearance, withCacheBust } from "@/hooks/useAppearance";
 import { cn } from "@/lib/utils";
 import { useBusinessName } from "@/hooks/useBusinessName";
+import { isHomeTextHidden } from "@/lib/homeVisibility";
 import type { Tables } from "@/integrations/supabase/types";
 
 type Appointment = Tables<"appointments"> & { services: { name: string; duration_minutes: number; buffer_minutes: number } | null };
@@ -56,6 +57,7 @@ export default function Admin() {
   const [editingPasswordId, setEditingPasswordId] = useState<string | null>(null);
   const [newUserPassword, setNewUserPassword] = useState("");
   const [businessNameInput, setBusinessNameInput] = useState("");
+  const [savingHomeVisibility, setSavingHomeVisibility] = useState(false);
   const [slotIntervalInput, setSlotIntervalInput] = useState("30");
   const [cancelamentoAntecedencia, setCancelamentoAntecedencia] = useState("60");
   const [serviceModalOpen, setServiceModalOpen] = useState(false);
@@ -496,6 +498,29 @@ export default function Admin() {
       toast.success(`Intervalo atualizado para ${slotIntervalInput} minutos!`);
     } catch (err: any) {
       toast.error(err.message);
+    }
+  };
+
+  const handleSaveHomeVisibility = async (hidden: boolean) => {
+    setSavingHomeVisibility(true);
+    try {
+      const value = String(hidden);
+      const { data: existing, error: readError } = await supabase
+        .from("business_settings").select("id").eq("key", "ocultar_texto_home").maybeSingle();
+      if (readError) throw readError;
+      const { error } = existing
+        ? await supabase.from("business_settings").update({ value }).eq("id", existing.id)
+        : await supabase.from("business_settings").insert({ key: "ocultar_texto_home", value });
+      if (error) throw error;
+      queryClient.setQueryData<Record<string, string>>(["appearance-settings"], (old) => ({
+        ...old, ocultar_texto_home: value,
+      }));
+      await queryClient.invalidateQueries({ queryKey: ["appearance-settings"] });
+      toast.success("Visibilidade do nome atualizada com sucesso!");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erro ao salvar a visibilidade do nome.");
+    } finally {
+      setSavingHomeVisibility(false);
     }
   };
 
@@ -1565,6 +1590,23 @@ export default function Admin() {
                         onChange={(e) => setBusinessNameInput(e.target.value)}
                         placeholder="Ex: Barbearia Premium"
                       />
+                      <div className="mt-4 flex items-start gap-3">
+                        <Switch
+                          id="ocultar-texto-home"
+                          aria-describedby="ocultar-texto-home-description"
+                          checked={isHomeTextHidden(appearanceSettings?.ocultar_texto_home)}
+                          onCheckedChange={handleSaveHomeVisibility}
+                          disabled={savingHomeVisibility || !appearanceSettings}
+                        />
+                        <div>
+                          <label htmlFor="ocultar-texto-home" className="block text-sm font-medium text-foreground">
+                            Ocultar nome em texto na página inicial
+                          </label>
+                          <p id="ocultar-texto-home-description" className="mt-1 text-xs text-muted-foreground">
+                            Ative para esconder o texto padrão caso a sua imagem de fundo ou logo já contenha o nome da barbearia.
+                          </p>
+                        </div>
+                      </div>
                     </div>
                     <Button onClick={handleSaveBusinessName} className="gap-2">
                       <Settings className="h-4 w-4" />
