@@ -27,6 +27,19 @@ const Index = () => {
   const [cancelThreshold, setCancelThreshold] = useState(60); // minutes, from business_settings
   const [rescheduleAppt, setRescheduleAppt] = useState<any>(null);
 
+  // Progressive background: preload off-screen, fade in when fully decoded
+  const bgUrl = withCacheBust(appearance?.background_image, appearance?.__v);
+  const [bgLoaded, setBgLoaded] = useState(false);
+  useEffect(() => {
+    setBgLoaded(false);
+    if (!bgUrl) return;
+    const img = new Image();
+    img.decoding = "async";
+    img.onload = () => setBgLoaded(true);
+    img.src = bgUrl;
+    return () => { img.onload = null; };
+  }, [bgUrl]);
+
   // Load cancellation threshold
   useEffect(() => {
     supabase
@@ -155,17 +168,18 @@ const Index = () => {
 
   return (
     <main
-      className="relative flex min-h-[100dvh] flex-col items-center justify-center overflow-hidden pb-[120px] sm:pb-0"
-      style={{
-        backgroundColor: 'hsl(240 10% 4%)',
-        backgroundImage: appearance?.background_image
-          ? `linear-gradient(rgba(10,10,10,0.82), rgba(10,10,10,0.82)), url("${withCacheBust(appearance.background_image, appearance.__v)}")`
-          : undefined,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundAttachment: 'fixed',
-      }}
+      className="relative flex min-h-[100dvh] flex-col items-center justify-center overflow-x-hidden bg-zinc-950 py-10 pb-16 sm:pb-10"
     >
+      {/* Background: solid dark color first, image fades in once downloaded */}
+      {bgUrl && (
+        <div
+          aria-hidden
+          className={`pointer-events-none fixed inset-0 z-0 bg-cover bg-center transition-opacity duration-500 ${bgLoaded ? "opacity-100" : "opacity-0"}`}
+          style={{
+            backgroundImage: `linear-gradient(rgba(10,10,10,0.82), rgba(10,10,10,0.82)), url("${bgUrl}")`,
+          }}
+        />
+      )}
 
       {/* Content */}
       <div className="relative z-10 flex flex-col items-center px-6 text-center">
@@ -177,7 +191,9 @@ const Index = () => {
               alt={`${businessName} Logo`}
               loading="lazy"
               decoding="async"
-              className="h-48 w-auto max-w-[80vw] rounded-3xl object-contain drop-shadow-2xl sm:h-56 md:h-64"
+              width={180}
+              height={180}
+              className="h-auto max-h-48 w-auto max-w-[180px] rounded-3xl object-contain drop-shadow-2xl sm:max-h-56 sm:max-w-[220px]"
             />
           </div>
         )}

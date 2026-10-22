@@ -16,11 +16,13 @@ const GOOGLE_FONTS_URL: Record<string, string> = {
   Poppins: "https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap",
 };
 
-/** Append a cache-busting query param. Returns undefined for empty/null URLs. */
-export function withCacheBust(url?: string | null, version?: string): string | undefined {
+/**
+ * Uploads use unique filenames, so the URL itself already busts caches.
+ * Keep the URL stable so browsers/CDN can cache images across visits.
+ */
+export function withCacheBust(url?: string | null, _version?: string): string | undefined {
   if (!url) return undefined;
-  const v = version || String(Date.now());
-  return `${url}${url.includes("?") ? "&" : "?"}t=${v}`;
+  return url;
 }
 
 export function useAppearance() {

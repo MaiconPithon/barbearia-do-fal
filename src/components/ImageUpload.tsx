@@ -3,6 +3,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/button";
 import { Upload, X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { compressImage } from "@/lib/compressImage";
 
 interface ImageUploadProps {
   label: string;
@@ -11,32 +12,34 @@ interface ImageUploadProps {
   storagePath: string; // e.g. "logo.png" or "background.jpg"
   onUploaded: (publicUrl: string) => void | Promise<void>;
   previewClass?: string;
+  maxWidth?: number;
+  maxBytes?: number;
 }
 
-export function ImageUpload({ label, hint, currentUrl, storagePath, onUploaded, previewClass = "h-24 w-full object-cover" }: ImageUploadProps) {
+export function ImageUpload({ label, hint, currentUrl, storagePath, onUploaded, previewClass = "h-24 w-full object-cover", maxWidth = 1200, maxBytes = 200 * 1024 }: ImageUploadProps) {
   const [uploading, setUploading] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const handleFile = async (file: File) => {
-    if (!file.type.startsWith("image/")) {
+  const handleFile = async (original: File) => {
+    if (!original.type.startsWith("image/")) {
       toast.error("Selecione apenas arquivos de imagem.");
       return;
     }
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("Imagem muito grande (máximo 5MB).");
+    if (original.size > 15 * 1024 * 1024) {
+      toast.error("Imagem muito grande (máximo 15MB).");
       return;
     }
 
     setUploading(true);
     try {
-      // Generate unique filename
-      const ext = file.name.split(".").pop() || "jpg";
+      const file = await compressImage(original, maxWidth, maxBytes);
+      const ext = file.name.split(".").pop() || "webp";
       const fileName = `${storagePath}-${Date.now()}.${ext}`;
 
       const { error: uploadError } = await supabase.storage
         .from("site-assets")
-        .upload(fileName, file, { cacheControl: "3600", upsert: true });
+        .upload(fileName, file, { cacheControl: "31536000", upsert: true, contentType: file.type });
 
       if (uploadError) throw uploadError;
 
