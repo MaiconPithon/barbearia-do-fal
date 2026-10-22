@@ -12,6 +12,7 @@ import { useAppearance, withCacheBust } from "@/hooks/useAppearance";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
+import { isHomeTextHidden } from "@/lib/homeVisibility";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -182,6 +183,8 @@ const Index = () => {
         )}
 
         {/* Title */}
+        {!isHomeTextHidden(appearance?.ocultar_texto_home) && (
+          <>
         <h1 className="mb-2 text-4xl font-bold uppercase tracking-widest text-foreground sm:text-5xl md:text-6xl">
           {businessName.split(" ").map((word, i, arr) =>
             i === arr.length - 1 ? <span key={i} className="text-primary">{word}</span> : <span key={i}>{word} </span>
@@ -192,6 +195,8 @@ const Index = () => {
           Estilo &amp; Atitude
         </p>
         <div className="mb-8 h-px w-24 bg-primary/40" />
+          </>
+        )}
 
         {/* CTA */}
         <Button
