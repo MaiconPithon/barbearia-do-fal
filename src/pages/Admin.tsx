@@ -1671,6 +1671,8 @@ export default function Admin() {
                         currentUrl={withCacheBust(appearanceSettings?.logo_image, appearanceVersion)}
                         storagePath="logo"
                         previewClass="h-24 w-auto object-contain mx-auto"
+                        maxWidth={400}
+                        maxBytes={50 * 1024}
                         onUploaded={(url) => saveImageSetting("logo_image", url)}
                       />
                     </div>
@@ -1681,6 +1683,8 @@ export default function Admin() {
                         hint="Envie a imagem de fundo do site. Recomendado: imagem escura, paisagem (1920×1080)."
                         currentUrl={withCacheBust(appearanceSettings?.background_image, appearanceVersion)}
                         storagePath="background"
+                        maxWidth={1200}
+                        maxBytes={200 * 1024}
                         onUploaded={(url) => saveImageSetting("background_image", url)}
                       />
                     </div>
