@@ -21,7 +21,7 @@ import { RescheduleModal } from "@/components/RescheduleModal";
 import { AppearanceTab } from "@/components/AppearanceTab";
 import { QuickSale } from "@/components/QuickSale";
 import { ImageUpload } from "@/components/ImageUpload";
-import { useAppearance } from "@/hooks/useAppearance";
+import { useAppearance, withCacheBust } from "@/hooks/useAppearance";
 import { cn } from "@/lib/utils";
 import { useBusinessName } from "@/hooks/useBusinessName";
 import type { Tables } from "@/integrations/supabase/types";
@@ -70,6 +70,22 @@ export default function Admin() {
   const [replicateSource, setReplicateSource] = useState<any>(null);
   const { businessName } = useBusinessName();
   const appearanceSettings = useAppearance();
+  const appearanceVersion = (appearanceSettings as any)?.__v;
+
+  // Saves a global image URL (logo/background). Removal writes strict null.
+  const saveImageSetting = async (key: "logo_image" | "background_image", url: string) => {
+    const value = url ? url : null;
+    try {
+      const { data: existing } = await supabase.from("business_settings").select("id").eq("key", key).maybeSingle();
+      const { error } = existing
+        ? await supabase.from("business_settings" as any).update({ value } as any).eq("key", key)
+        : await supabase.from("business_settings" as any).insert({ key, value } as any);
+      if (error) throw error;
+      queryClient.setQueryData(["appearance-settings"], (old: any) => ({ ...(old || {}), [key]: value, __v: String(Date.now()) }));
+      queryClient.invalidateQueries({ queryKey: ["appearance-settings"] });
+      if (!value) toast.success("Imagem removida com sucesso!");
+    } catch (err: any) { toast.error(err.message || "Erro ao salvar imagem."); }
+  };
 
   useEffect(() => {
     const checkAdmin = async () => {
@@ -1610,20 +1626,10 @@ export default function Admin() {
                       <ImageUpload
                         label="Logo da Barbearia"
                         hint="Envie a logo que aparecerá na página inicial. Recomendado: PNG com fundo transparente."
-                        currentUrl={appearanceSettings?.logo_image || ""}
+                        currentUrl={withCacheBust(appearanceSettings?.logo_image, appearanceVersion)}
                         storagePath="logo"
                         previewClass="h-24 w-auto object-contain mx-auto"
-                        onUploaded={async (url) => {
-                          try {
-                            const { data: existing } = await supabase.from("business_settings").select("id").eq("key", "logo_image").maybeSingle();
-                            if (existing) {
-                              await supabase.from("business_settings" as any).update({ value: url } as any).eq("key", "logo_image");
-                            } else {
-                              await supabase.from("business_settings" as any).insert({ key: "logo_image", value: url } as any);
-                            }
-                            queryClient.invalidateQueries({ queryKey: ["appearance-settings"] });
-                          } catch (err: any) { toast.error(err.message); }
-                        }}
+                        onUploaded={(url) => saveImageSetting("logo_image", url)}
                       />
                     </div>
 
@@ -1631,19 +1637,9 @@ export default function Admin() {
                       <ImageUpload
                         label="Imagem de Fundo (Banner)"
                         hint="Envie a imagem de fundo do site. Recomendado: imagem escura, paisagem (1920×1080)."
-                        currentUrl={appearanceSettings?.background_image || ""}
+                        currentUrl={withCacheBust(appearanceSettings?.background_image, appearanceVersion)}
                         storagePath="background"
-                        onUploaded={async (url) => {
-                          try {
-                            const { data: existing } = await supabase.from("business_settings").select("id").eq("key", "background_image").maybeSingle();
-                            if (existing) {
-                              await supabase.from("business_settings" as any).update({ value: url } as any).eq("key", "background_image");
-                            } else {
-                              await supabase.from("business_settings" as any).insert({ key: "background_image", value: url } as any);
-                            }
-                            queryClient.invalidateQueries({ queryKey: ["appearance-settings"] });
-                          } catch (err: any) { toast.error(err.message); }
-                        }}
+                        onUploaded={(url) => saveImageSetting("background_image", url)}
                       />
                     </div>
                   </div>

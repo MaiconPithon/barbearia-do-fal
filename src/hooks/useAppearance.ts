@@ -16,6 +16,13 @@ const GOOGLE_FONTS_URL: Record<string, string> = {
   Poppins: "https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap",
 };
 
+/** Append a cache-busting query param. Returns undefined for empty/null URLs. */
+export function withCacheBust(url?: string | null, version?: string): string | undefined {
+  if (!url) return undefined;
+  const v = version || String(Date.now());
+  return `${url}${url.includes("?") ? "&" : "?"}t=${v}`;
+}
+
 export function useAppearance() {
   const { data: settings } = useQuery({
     queryKey: ["appearance-settings"],
@@ -26,7 +33,8 @@ export function useAppearance() {
         .in("key", ["primary_color", "background_color", "info_color", "font_family", "title_bold", "title_italic", "background_image", "logo_image"]);
       if (error) throw error;
       const map: Record<string, string> = {};
-      data.forEach((r: any) => { map[r.key] = r.value; });
+      data.forEach((r: any) => { if (r.value != null) map[r.key] = r.value; });
+      map.__v = String(Date.now());
       return map;
     },
     staleTime: 30_000,

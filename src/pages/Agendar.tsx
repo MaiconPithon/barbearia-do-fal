@@ -14,7 +14,7 @@ import { toast } from "sonner";
 import { format, getDay, isBefore, startOfDay, addDays, isAfter, isToday } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
-import { useAppearance } from "@/hooks/useAppearance";
+import { useAppearance, withCacheBust } from "@/hooks/useAppearance";
 import rifaPremio from "@/assets/rifa-premio.jpeg.asset.json";
 import type { Enums, TablesInsert } from "@/integrations/supabase/types";
 
@@ -639,7 +639,10 @@ export default function Agendar() {
       className="relative min-h-screen"
       translate="no"
       style={{
-        backgroundImage: `linear-gradient(rgba(10,10,10,0.82), rgba(10,10,10,0.82)), url("${appearance?.background_image || '/images/site-bg.png'}")`,
+        backgroundColor: 'hsl(240 10% 4%)',
+        backgroundImage: appearance?.background_image
+          ? `linear-gradient(rgba(10,10,10,0.82), rgba(10,10,10,0.82)), url("${withCacheBust(appearance.background_image, appearance.__v)}")`
+          : undefined,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         backgroundAttachment: 'fixed',

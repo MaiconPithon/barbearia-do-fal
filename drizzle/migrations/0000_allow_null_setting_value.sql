@@ -1,0 +1,1 @@
+ALTER TABLE public.business_settings ALTER COLUMN value DROP NOT NULL;
