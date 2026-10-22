@@ -7,9 +7,8 @@ import { RescheduleModal } from "@/components/RescheduleModal";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabaseClient";
 import { useNavigate } from "react-router-dom";
-import logoFalFallback from "@/assets/logo-fal.png";
 import { useBusinessName } from "@/hooks/useBusinessName";
-import { useAppearance } from "@/hooks/useAppearance";
+import { useAppearance, withCacheBust } from "@/hooks/useAppearance";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
@@ -157,7 +156,10 @@ const Index = () => {
     <main
       className="relative flex min-h-[100dvh] flex-col items-center justify-center overflow-hidden pb-[120px] sm:pb-0"
       style={{
-        backgroundImage: `linear-gradient(rgba(10,10,10,0.82), rgba(10,10,10,0.82)), url("${appearance?.background_image || '/images/site-bg.png'}")`,
+        backgroundColor: 'hsl(240 10% 4%)',
+        backgroundImage: appearance?.background_image
+          ? `linear-gradient(rgba(10,10,10,0.82), rgba(10,10,10,0.82)), url("${withCacheBust(appearance.background_image, appearance.__v)}")`
+          : undefined,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         backgroundAttachment: 'fixed',
@@ -167,13 +169,17 @@ const Index = () => {
       {/* Content */}
       <div className="relative z-10 flex flex-col items-center px-6 text-center">
         {/* Sharp logo on top */}
-        <div className="mb-8">
-          <img
-            src={appearance?.logo_image || logoFalFallback}
-            alt={`${businessName} Logo`}
-            className="h-48 w-auto max-w-[80vw] rounded-3xl object-contain drop-shadow-2xl sm:h-56 md:h-64"
-          />
-        </div>
+        {appearance?.logo_image && (
+          <div className="mb-8">
+            <img
+              src={withCacheBust(appearance.logo_image, appearance.__v)}
+              alt={`${businessName} Logo`}
+              loading="lazy"
+              decoding="async"
+              className="h-48 w-auto max-w-[80vw] rounded-3xl object-contain drop-shadow-2xl sm:h-56 md:h-64"
+            />
+          </div>
+        )}
 
         {/* Title */}
         <h1 className="mb-2 text-4xl font-bold uppercase tracking-widest text-foreground sm:text-5xl md:text-6xl">

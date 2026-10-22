@@ -21,7 +21,7 @@ import { RescheduleModal } from "@/components/RescheduleModal";
 import { AppearanceTab } from "@/components/AppearanceTab";
 import { QuickSale } from "@/components/QuickSale";
 import { ImageUpload } from "@/components/ImageUpload";
-import { useAppearance } from "@/hooks/useAppearance";
+import { useAppearance, withCacheBust } from "@/hooks/useAppearance";
 import { cn } from "@/lib/utils";
 import { useBusinessName } from "@/hooks/useBusinessName";
 import type { Tables } from "@/integrations/supabase/types";
@@ -70,6 +70,22 @@ export default function Admin() {
   const [replicateSource, setReplicateSource] = useState<any>(null);
   const { businessName } = useBusinessName();
   const appearanceSettings = useAppearance();
+  const appearanceVersion = (appearanceSettings as any)?.__v;
+
+  // Saves a global image URL (logo/background). Removal writes strict null.
+  const saveImageSetting = async (key: "logo_image" | "background_image", url: string) => {
+    const value = url ? url : null;
+    try {
+      const { data: existing } = await supabase.from("business_settings").select("id").eq("key", key).maybeSingle();
+      const { error } = existing
+        ? await supabase.from("business_settings" as any).update({ value } as any).eq("key", key)
+        : await supabase.from("business_settings" as any).insert({ key, value } as any);
+      if (error) throw error;
+      queryClient.setQueryData(["appearance-settings"], (old: any) => ({ ...(old || {}), [key]: value, __v: String(Date.now()) }));
+      queryClient.invalidateQueries({ queryKey: ["appearance-settings"] });
+      if (!value) toast.success("Imagem removida com sucesso!");
+    } catch (err: any) { toast.error(err.message || "Erro ao salvar imagem."); }
+  };
 
   useEffect(() => {
     const checkAdmin = async () => {

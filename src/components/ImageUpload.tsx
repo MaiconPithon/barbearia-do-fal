@@ -9,7 +9,7 @@ interface ImageUploadProps {
   hint?: string;
   currentUrl?: string;
   storagePath: string; // e.g. "logo.png" or "background.jpg"
-  onUploaded: (publicUrl: string) => void;
+  onUploaded: (publicUrl: string) => void | Promise<void>;
   previewClass?: string;
 }
 
@@ -45,8 +45,9 @@ export function ImageUpload({ label, hint, currentUrl, storagePath, onUploaded, 
         .getPublicUrl(fileName);
 
       const publicUrl = urlData.publicUrl;
-      setPreview(publicUrl);
-      onUploaded(publicUrl);
+      setRemoved(false);
+      setPreview(`${publicUrl}?t=${Date.now()}`);
+      await onUploaded(publicUrl);
       toast.success("Imagem enviada com sucesso!");
     } catch (err: any) {
       toast.error(err.message || "Erro ao enviar imagem.");
@@ -60,7 +61,8 @@ export function ImageUpload({ label, hint, currentUrl, storagePath, onUploaded, 
     if (file) handleFile(file);
   };
 
-  const displayUrl = preview || currentUrl;
+  const [removed, setRemoved] = useState(false);
+  const displayUrl = preview || (removed ? undefined : currentUrl);
 
   return (
     <div>
@@ -113,6 +115,7 @@ export function ImageUpload({ label, hint, currentUrl, storagePath, onUploaded, 
           onClick={(e) => {
             e.stopPropagation();
             setPreview(null);
+            setRemoved(true);
             onUploaded("");
           }}
         >
