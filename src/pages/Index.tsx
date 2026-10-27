@@ -174,9 +174,9 @@ const Index = () => {
       {bgUrl && (
         <div
           aria-hidden
-          className={`pointer-events-none fixed inset-0 z-0 bg-cover bg-center transition-opacity duration-500 ${bgLoaded ? "opacity-100" : "opacity-0"}`}
+          className={`pointer-events-none fixed inset-0 z-0 bg-contain bg-top bg-no-repeat transition-opacity duration-500 ${bgLoaded ? "opacity-100" : "opacity-0"}`}
           style={{
-            backgroundImage: `linear-gradient(rgba(10,10,10,0.82), rgba(10,10,10,0.82)), url("${bgUrl}")`,
+            backgroundImage: `linear-gradient(rgba(10,10,10,0.55), rgba(10,10,10,0.55)), url("${bgUrl}")`,
           }}
         />
       )}
@@ -185,7 +185,7 @@ const Index = () => {
       <div className="relative z-10 flex flex-col items-center px-6 text-center">
         {/* Sharp logo on top */}
         {appearance?.logo_image && (
-          <div className="mb-8">
+          <div className="mb-8 overflow-hidden rounded-full shadow-lg ring-1 ring-white/20">
             <img
               src={withCacheBust(appearance.logo_image, appearance.__v)}
               alt={`${businessName} Logo`}
@@ -193,7 +193,7 @@ const Index = () => {
               decoding="async"
               width={180}
               height={180}
-              className="h-auto max-h-48 w-auto max-w-[180px] rounded-3xl object-contain drop-shadow-2xl sm:max-h-56 sm:max-w-[220px]"
+              className="h-44 w-44 rounded-full object-cover sm:h-56 sm:w-56"
             />
           </div>
         )}
