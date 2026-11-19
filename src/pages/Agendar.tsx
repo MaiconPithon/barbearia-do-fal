@@ -16,6 +16,8 @@ import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { useAppearance, withCacheBust } from "@/hooks/useAppearance";
 import rifaPremio from "@/assets/rifa-premio.jpeg.asset.json";
+import { PriceNoticeCard } from "@/components/PriceNoticeCard";
+import { getPriceNoticeImageUrl } from "@/lib/priceNotice";
 import type { Enums, TablesInsert } from "@/integrations/supabase/types";
 
 type Step = "service" | "date" | "time" | "info" | "payment" | "confirm" | "confirmed";
@@ -96,6 +98,7 @@ export default function Agendar() {
   const [paymentMethod, setPaymentMethod] = useState<Enums<"payment_method">>("dinheiro");
   const [hoveredRating, setHoveredRating] = useState(0);
   const [submittedRating, setSubmittedRating] = useState(false);
+  const [noticeDismissed, setNoticeDismissed] = useState(false);
   const [isSubmittingCheckout, setIsSubmittingCheckout] = useState(false);
   const checkoutLockRef = useRef(false);
 
@@ -1014,6 +1017,13 @@ export default function Agendar() {
                 Enviar confirmação via WhatsApp
               </Button>
             </a>
+
+            {!noticeDismissed && (
+              <PriceNoticeCard
+                imageUrl={getPriceNoticeImageUrl()}
+                onDismiss={() => setNoticeDismissed(true)}
+              />
+            )}
 
             <div className="mb-6 flex flex-col items-center gap-4 rounded-lg border border-primary/40 bg-card p-5 text-center sm:flex-row sm:text-left">
               <img
